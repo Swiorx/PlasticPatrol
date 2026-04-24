@@ -17,3 +17,4 @@ Thumbs.db
 *.log
 .vscode/settings.json
 .gitignore
+backend/.env
