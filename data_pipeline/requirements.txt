@@ -3,3 +3,7 @@ rasterio
 numpy
 shapely
 geopandas
+sentinelhub-py
+sqlalchemy
+psycopg2-binary
+geoalchemy2

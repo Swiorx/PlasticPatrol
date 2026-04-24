@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.ext.declarative import declarative_base
+from geoalchemy2 import Geometry
 from datetime import datetime, timezone
 
 Base = declarative_base()
@@ -19,8 +20,7 @@ class PlasticDebris(Base):
     __tablename__ = "plastic_debris"
 
     id = Column(Integer, primary_key=True, index=True)
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
+    geom = Column(Geometry(geometry_type='POINT', srid=4326), nullable=False)
     size_category = Column(String, default="small") # ex: small, medium, large
     detected_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_collected = Column(Boolean, default=False)
