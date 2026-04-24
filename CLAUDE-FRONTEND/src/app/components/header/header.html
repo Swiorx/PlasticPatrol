@@ -1,0 +1,18 @@
+<header class="header">
+  <nav class="nav">
+    <a class="logo" routerLink="/">🛰 PLASTICPATROL</a>
+    <div class="links">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">Home</a>
+      <a routerLink="/map" routerLinkActive="active">Map</a>
+      <a routerLink="/classify" routerLinkActive="active">Classify</a>
+    </div>
+    <div class="auth-area">
+      @if (auth.isLoggedIn()) {
+        <button class="btn-outline" (click)="logout()">Logout</button>
+      } @else {
+        <a routerLink="/login"><button class="btn-outline">Login</button></a>
+        <a routerLink="/register"><button class="btn-primary">Register</button></a>
+      }
+    </div>
+  </nav>
+</header>
