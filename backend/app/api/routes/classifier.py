@@ -1,4 +1,11 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
+import sys
+from pathlib import Path
+
+# Adaugam radacina proiectului in calea sistemului pentru a gasi ml_classifier
+ROOT_DIR = Path(__file__).resolve().parents[4]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 router = APIRouter(prefix="/classify", tags=["classifier"])
 
@@ -20,5 +27,7 @@ async def classify_image(file: UploadFile = File(...)):
         result = _classify(image_bytes)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Eroare interna ML: {str(e)}")
 
     return result
