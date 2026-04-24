@@ -1,2 +1,3 @@
 # PlasticPatrol
-PlasticPatrol project for Cassini Hackaton
+
+Conține instrucțiunile rapide de setup și flow-ul aplicației pentru juriul CASSINI.
