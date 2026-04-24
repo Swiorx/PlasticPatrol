@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+from datetime import datetime, timezone
 
 Base = declarative_base()
 
@@ -22,7 +22,7 @@ class PlasticDebris(Base):
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     size_category = Column(String, default="small") # ex: small, medium, large
-    detected_at = Column(DateTime, default=datetime.now(datetime.timezone.utc))
+    detected_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_collected = Column(Boolean, default=False)
     collected_by = Column(Integer, default=None) # ID-ul userului care a colectat
     collected_at = Column(DateTime, default=None) # Data colectării
