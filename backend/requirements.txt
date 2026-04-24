@@ -7,5 +7,5 @@ pydantic-settings
 python-dotenv
 email-validator
 geoalchemy2
-passlib[bcrypt]
+bcrypt
 python-jose[cryptography]
