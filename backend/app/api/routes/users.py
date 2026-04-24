@@ -9,8 +9,17 @@ from app.db.models import User
 from app.schemas.user import UserCreate, UserOut
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.api.deps import get_current_user
+from typing import List
 
 router = APIRouter()
+
+@router.get("/", response_model=List[UserOut])
+def get_all_users(db: Session = Depends(get_db)):
+    """
+    Returnează toți utilizatorii din baza de date pentru a-i putea vedea în Swagger.
+    Parolele nu vor fi afișate, deoarece folosim schema UserOut.
+    """
+    return db.query(User).all()
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register_user(user_data: UserCreate, db: Session = Depends(get_db)):

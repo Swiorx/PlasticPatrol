@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import engine
 from app.db import models
-from app.api.routes import users
+from app.api.routes import users, plastic
 
 # Creăm tabelele în baza de date pe baza modelelor definite anterior
 models.Base.metadata.create_all(bind=engine)
@@ -19,6 +19,7 @@ app.add_middleware(
 )
 
 app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(plastic.router, prefix="/api/plastics", tags=["plastics"])
 
 @app.get("/")
 def read_root():

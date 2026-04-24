@@ -1,28 +1,33 @@
 from jose import jwt, JWTError, ExpiredSignatureError
 from datetime import datetime, timedelta, timezone
 from typing import Any, Union
-import hashlib
+import bcrypt
 from fastapi import HTTPException, status
 from pydantic import ValidationError
+from app.core.config import settings
 
-# 2. Configurația JWT (Acestea ar trebui să stea în fișierul .env pe care îl ai deja)
-SECRET_KEY = "CHEIE_SECRETĂ_FOARTE_LUNGĂ_ȘI_RANDOM" # Generează una cu 'openssl rand -hex 32'
+# 2. Configurația JWT folosind cheia secretă din mediul de rulare (.env)
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 # Token-uri scurte = Securitate mai mare
 
 def get_password_hash(password: str) -> str:
     """
-    Transformă parola într-un hash securizat folosind SHA-256, adăugând cheia secretă
-    pe post de 'salt' pentru securitate suplimentară împotriva atacurilor de tip Rainbow Table.
+    Transformă parola într-un hash securizat folosind bcrypt direct.
+    Acest algoritm previne atacurile de tip Rainbow Table prin adăugarea unui salt generat aleatoriu.
     """
-    salted_password = f"{password}{SECRET_KEY}"
-    return hashlib.sha256(salted_password.encode('utf-8')).hexdigest()
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed_password.decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
-    Verifică dacă parola introdusă se potrivește cu hash-ul SHA-256 din baza de date.
+    Verifică dacă parola introdusă se potrivește cu hash-ul bcrypt din baza de date.
     """
-    return get_password_hash(plain_password) == hashed_password
+    password_byte_enc = plain_password.encode('utf-8')
+    hashed_password_byte_enc = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password_byte_enc, hashed_password_byte_enc)
 
 def create_access_token(subject: Union[str, Any]) -> str:
     """
