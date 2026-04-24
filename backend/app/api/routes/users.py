@@ -36,13 +36,15 @@ def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login")
 async def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # În Swagger, câmpul username va fi folosit pentru a introduce email-ul
-    user = db.query(User).filter(User.email == form_data.username).first()
+    # Permitem logarea FIE cu adresa de email, FIE cu username-ul
+    user = db.query(User).filter(
+        (User.email == form_data.username) | (User.username == form_data.username)
+    ).first()
     
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Email sau parola incorecte",
+            detail="Email/Username sau parolă incorecte",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
