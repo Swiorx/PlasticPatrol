@@ -18,3 +18,7 @@ Thumbs.db
 .vscode/settings.json
 .gitignore
 backend/.env
+
+# Training data and model weights (too large for git)
+data/
+ml_classifier/weights/
