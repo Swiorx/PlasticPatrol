@@ -1,6 +1,10 @@
 import os
 
 class Settings:
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://admin:admin123@localhost:5432/plasticpatrol")
+    DATABASE_URL: str = os.getenv("DATABASE_URL")
+    SECRET_KEY: str = os.getenv("SECRET_KEY")
+
+    class Config:
+        env_file = ".env"
 
 settings = Settings()
