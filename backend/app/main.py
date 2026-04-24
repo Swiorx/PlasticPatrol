@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+# Add project root to path so ml_classifier (sibling of backend/) is importable
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import engine

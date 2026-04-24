@@ -21,3 +21,6 @@ backend/.env
 
 # Training data (too large for git)
 data/
+
+# Visual brainstorming sessions
+.superpowers/
