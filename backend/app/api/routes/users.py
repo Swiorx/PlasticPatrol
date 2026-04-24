@@ -1,55 +1,58 @@
 # Rute pentru profilul utilizatorilor (ex: GET /users/{user_id}/eco-points).
 # backend/app/api/routes/users.py
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from uuid import uuid4
 
 from app.db.session import get_db
 from app.db.models import User
-from app.schemas.user import UserCreate, UserLogin
-from app.core.security import get_password_hash, verify_password, cookie, backend, SessionData, verifier
+from app.schemas.user import UserCreate, UserOut
+from app.core.security import get_password_hash, verify_password, create_access_token
+from app.api.deps import get_current_user
 
 router = APIRouter()
 
-@router.post("/register")
+@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email deja folosit")
+    existing_email = db.query(User).filter(User.email == user_data.email).first()
+    if existing_email:
+        raise HTTPException(status_code=400, detail="Email-ul este deja folosit")
+        
+    existing_username = db.query(User).filter(User.username == user_data.username).first()
+    if existing_username:
+        raise HTTPException(status_code=400, detail="Username-ul este deja folosit")
     
     hashed_pwd = get_password_hash(user_data.password)
-    new_user = User(email=user_data.email, hashed_password=hashed_pwd)
+    new_user = User(
+        username=user_data.username,
+        email=user_data.email, 
+        hashed_password=hashed_pwd
+    )
     
     db.add(new_user)
     db.commit()
-    return {"message": "Utilizator inregistrat cu succes. Te rugam sa te loghezi."}
+    db.refresh(new_user)
+    return new_user
 
 @router.post("/login")
-async def login_user(user_data: UserLogin, response: Response, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == user_data.email).first()
-    if not user or not verify_password(user_data.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Email sau parola incorecte")
+async def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # În Swagger, câmpul username va fi folosit pentru a introduce email-ul
+    user = db.query(User).filter(User.email == form_data.username).first()
+    
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Email sau parola incorecte",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # Creăm sesiunea (UUID)
-    session_id = uuid4()
-    data = SessionData(user_email=user.email)
+    # Generăm JWT Token
+    access_token = create_access_token(subject=user.email)
 
-    # Salvăm sesiunea în memorie și atașăm cookie-ul pe răspuns
-    await backend.create(session_id, data)
-    cookie.attach_to_response(response, session_id)
-
-    return {"message": f"Login reusit pentru {user.email}"}
-
-@router.post("/logout")
-async def logout(response: Response, session_id: uuid4 = Depends(cookie)):
-    # Ștergem sesiunea din memorie și din browser
-    await backend.delete(session_id)
-    cookie.delete_from_response(response)
-    return {"message": "Delogat cu succes"}
+    return {"access_token": access_token, "token_type": "bearer"}
 
 # Exemplu de rută protejată:
-@router.get("/me")
-async def get_current_user_profile(session_data: SessionData = Depends(verifier), db: Session = Depends(get_db)):
-    # Această rută funcționează DOAR dacă utilizatorul are un cookie valid
-    user = db.query(User).filter(User.email == session_data.user_email).first()
-    return {"email": user.email, "eco_points": user.eco_points}
+@router.get("/me", response_model=UserOut)
+async def get_current_user_profile(current_user: User = Depends(get_current_user)):
+    # Această rută funcționează DOAR dacă utilizatorul are un token valid
+    return current_user
