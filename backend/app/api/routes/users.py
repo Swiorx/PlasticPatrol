@@ -51,8 +51,9 @@ async def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Sessi
 
     return {"access_token": access_token, "token_type": "bearer"}
 
-# Exemplu de rută protejată:
+# Exemplu de rută protejată
+
 @router.get("/me", response_model=UserOut)
 async def get_current_user_profile(current_user: User = Depends(get_current_user)):
     # Această rută funcționează DOAR dacă utilizatorul are un token valid
-    return current_user
+    return current_user
