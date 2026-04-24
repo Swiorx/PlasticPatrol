@@ -13,13 +13,21 @@ from typing import List
 
 router = APIRouter()
 
+@router.get("/leaderboard", response_model=List[UserOut])
+def get_leaderboard(db: Session = Depends(get_db), limit: int = 10):
+    """
+    Returnează Top utilizatori în funcție de punctele ecologice (eco_points).
+    """
+    return db.query(User).order_by(User.eco_points.desc()).limit(limit).all()
+
 @router.get("/", response_model=List[UserOut])
-def get_all_users(db: Session = Depends(get_db)):
+def get_all_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
     Returnează toți utilizatorii din baza de date pentru a-i putea vedea în Swagger.
     Parolele nu vor fi afișate, deoarece folosim schema UserOut.
+    Suportă paginație via 'skip' și 'limit'.
     """
-    return db.query(User).all()
+    return db.query(User).offset(skip).limit(limit).all()
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register_user(user_data: UserCreate, db: Session = Depends(get_db)):

@@ -1,1 +1,5 @@
-# Clase Pydantic folosite pentru serializare și validarea datelor primite.
+from pydantic import BaseModel
+
+class PlasticReportCreate(BaseModel):
+    lat: float
+    lon: float
