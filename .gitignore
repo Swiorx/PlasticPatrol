@@ -19,6 +19,5 @@ Thumbs.db
 .gitignore
 backend/.env
 
-# Training data and model weights (too large for git)
+# Training data (too large for git)
 data/
-ml_classifier/weights/
