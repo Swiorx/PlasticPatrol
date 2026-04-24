@@ -3,7 +3,8 @@ uvicorn
 sqlalchemy
 psycopg2-binary
 pydantic
+pydantic-settings
+python-dotenv
 geoalchemy2
-psycopg2-binary
 passlib[bcrypt]
 python-jose[cryptography]
