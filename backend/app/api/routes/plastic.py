@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Response, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast
 from geoalchemy2.functions import ST_AsText
@@ -6,11 +6,13 @@ from geoalchemy2.types import Geography
 from geoalchemy2.elements import WKTElement
 from typing import Optional, List
 from datetime import datetime, timezone
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import subprocess
 import sys
 import json
 import time
+import os
+from pathlib import Path
 
 from app.db.session import get_db
 from app.db.models import PlasticDebris, User, Notification
@@ -33,6 +35,45 @@ def check_rate_limit(user_id: int, action: str = "default"):
     _rate_limit_store[key] = now
 
 router = APIRouter()
+
+
+class SatelliteScanOptions(BaseModel):
+    use_preset_locations: bool = Field(
+        default=True,
+        description="Folosește preset-uri geografice (true) sau SENTINEL_BBOX custom (false).",
+    )
+    preset_location_set: str = Field(
+        default="world_hotspots",
+        description="Setul preset de locații. Exemple: world_hotspots, constanta_only.",
+    )
+    target_resolution_meters: float = Field(
+        default=10,
+        ge=1,
+        le=1000,
+        description="Rezoluția țintă în metri/pixel. 10 păstrează calitate mare.",
+    )
+    min_component_pixels: int = Field(
+        default=12,
+        ge=1,
+        le=100000,
+        description="Filtru anti-zgomot: elimină componentele prea mici.",
+    )
+    max_relevant_points: int = Field(
+        default=1200,
+        ge=1,
+        le=1000000,
+        description="Limită pentru punctele candidate trimise în DB.",
+    )
+    max_grid_dimension: int = Field(
+        default=2500,
+        ge=128,
+        le=12000,
+        description="Limită de siguranță pentru dimensiunea rasterului per regiune.",
+    )
+    use_mock_data: Optional[bool] = Field(
+        default=None,
+        description="Forțează mock data (true/false). Dacă e null, decide automat după credențiale.",
+    )
 
 @router.get("/")
 def get_all_plastic_debris(
@@ -210,6 +251,7 @@ def delete_all_plastic_debris(
 @router.post("/scan/start", status_code=status.HTTP_202_ACCEPTED)
 def trigger_satellite_scan(
     background_tasks: BackgroundTasks,
+    scan_options: SatelliteScanOptions = Body(default_factory=SatelliteScanOptions),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -218,27 +260,65 @@ def trigger_satellite_scan(
 
     Dacă credențialele Sentinel Hub nu sunt configurate, se folosesc
     automat date mock (simulate) pentru testare.
+
+    Parametrii de scanare se trimit din Swagger body și sunt mapați pe
+    variabilele de mediu ale scriptului `sentinel_fetcher.py`.
     """
     check_rate_limit(current_user.id, "scan")
 
-    import os
-    from pathlib import Path
-    project_root = Path(__file__).resolve().parents[3]
+    project_root = Path(__file__).resolve().parents[4]
     script_path = project_root / "data_pipeline" / "sentinel_fetcher.py"
+    log_path = project_root / "backend" / "logs" / "sentinel_scan.log"
+    conda_prefix = os.getenv("SENTINEL_CONDA_PREFIX", str(project_root / ".conda"))
+    conda_exe = os.getenv("SENTINEL_CONDA_EXE", "/home/rares/anaconda3/bin/conda")
+
+    if not script_path.exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"Nu găsesc scriptul de scanare: {script_path}",
+        )
 
     # Copiem env-ul curent și forțăm mock dacă nu avem credențiale SH
     env = {**os.environ}
+    env.update(
+        {
+            "USE_PRESET_LOCATIONS": "true" if scan_options.use_preset_locations else "false",
+            "PRESET_LOCATION_SET": scan_options.preset_location_set,
+            "TARGET_RESOLUTION_METERS": str(scan_options.target_resolution_meters),
+            "MIN_COMPONENT_PIXELS": str(scan_options.min_component_pixels),
+            "MAX_RELEVANT_POINTS": str(scan_options.max_relevant_points),
+            "MAX_GRID_DIMENSION": str(scan_options.max_grid_dimension),
+        }
+    )
+
     sh_id = os.getenv("SH_CLIENT_ID", os.getenv("SENTINEL_HUB_CLIENT_ID", ""))
     sh_secret = os.getenv("SH_CLIENT_SECRET", os.getenv("SENTINEL_HUB_CLIENT_SECRET", ""))
-    if not sh_id or not sh_secret:
+    if scan_options.use_mock_data is not None:
+        env["USE_MOCK_DATA"] = "1" if scan_options.use_mock_data else "0"
+    elif not sh_id or not sh_secret:
         env["USE_MOCK_DATA"] = "1"
 
+    if Path(conda_exe).exists() and Path(conda_prefix).exists():
+        command = [conda_exe, "run", "-p", conda_prefix, "python", str(script_path)]
+    else:
+        # Fallback la interpreterul curent dacă conda nu e disponibil.
+        command = [sys.executable, str(script_path)]
+
     def run_scan():
-        subprocess.Popen(
-            [sys.executable, str(script_path)],
-            cwd=str(project_root),
-            env=env
-        )
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as log_file:
+            log_file.write(
+                f"\n[{datetime.now(timezone.utc).isoformat()}] Starting sentinel scan. "
+                f"command={' '.join(command)}\n"
+            )
+            log_file.flush()
+            subprocess.Popen(
+                command,
+                cwd=str(project_root),
+                env=env,
+                stdout=log_file,
+                stderr=log_file,
+            )
 
     background_tasks.add_task(run_scan)
 
@@ -247,7 +327,18 @@ def trigger_satellite_scan(
     return {
         "message": f"Comanda a fost trimisă cu succes către satelit{mock_note}! "
                    "Scanarea rulează acum în fundal. Dă un refresh la lista de plastic "
-                   "în câteva minute pentru a vedea noile rezultate."
+                   "în câteva minute pentru a vedea noile rezultate.",
+        "effective_scan_options": {
+            "USE_PRESET_LOCATIONS": env["USE_PRESET_LOCATIONS"],
+            "PRESET_LOCATION_SET": env["PRESET_LOCATION_SET"],
+            "TARGET_RESOLUTION_METERS": env["TARGET_RESOLUTION_METERS"],
+            "MIN_COMPONENT_PIXELS": env["MIN_COMPONENT_PIXELS"],
+            "MAX_RELEVANT_POINTS": env["MAX_RELEVANT_POINTS"],
+            "MAX_GRID_DIMENSION": env["MAX_GRID_DIMENSION"],
+            "USE_MOCK_DATA": env.get("USE_MOCK_DATA", "0"),
+            "runner": "conda" if command[0] == conda_exe else "python",
+            "scan_log": str(log_path),
+        }
     }
 
 @router.get("/export/geojson")
