@@ -1,0 +1,56 @@
+<div class="classify-page">
+  <div class="classify-inner">
+    <h2>Classify Ocean Image</h2>
+    <p class="subtitle">Upload a photo — our AI detects plastic debris with 93% accuracy</p>
+
+    @if (!result) {
+      <div
+        class="dropzone"
+        [class.drag-over]="dragOver"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event)"
+        (click)="fileInput.click()"
+      >
+        <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" hidden (change)="onFileSelect($event)">
+        @if (preview) {
+          <img [src]="preview" class="preview-img" alt="Preview">
+        } @else {
+          <div class="drop-hint">
+            <span class="drop-icon">📷</span>
+            <span class="drop-text">Drag & drop image here</span>
+            <span class="drop-sub">or click to browse · JPEG, PNG, WebP · max 10 MB</span>
+          </div>
+        }
+        @if (loading) {
+          <div class="loading-overlay">
+            <div class="spinner"></div>
+            <span>Analysing…</span>
+          </div>
+        }
+      </div>
+      @if (error) { <p class="error-msg">{{ error }}</p> }
+    }
+
+    @if (result) {
+      <div class="result-card" [class.debris]="result.label === 'debris'" [class.clean]="result.label === 'clean'">
+        @if (preview) {
+          <img [src]="preview" class="result-thumb" alt="Classified image">
+        }
+        <div class="result-body">
+          <div class="result-label">
+            {{ result.label === 'debris' ? '🚨 DEBRIS DETECTED' : '✅ CLEAN WATER' }}
+          </div>
+          <div class="confidence-row">
+            <span class="confidence-text">Confidence: {{ confidencePct }}%</span>
+            <span class="confidence-badge" [class.high]="confidencePct >= 80">{{ confidencePct }}%</span>
+          </div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" [style.width.%]="confidencePct" [class.debris]="result.label === 'debris'"></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-outline reset-btn" (click)="reset()">Classify another image</button>
+    }
+  </div>
+</div>

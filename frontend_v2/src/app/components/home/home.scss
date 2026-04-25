@@ -1,0 +1,267 @@
+/* ── Parallax hero ──────────────────────────────────── */
+
+.parallax-wrap {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Water background — extends beyond viewport so parallax shift has room */
+.water-bg {
+  position: absolute;
+  inset: -25% -10%;
+  will-change: transform;
+  background-image: url('/assets/hero/boat-water.jpg');
+  background-size: cover;
+  background-position: center;
+  animation: waterDrift 10s ease-in-out infinite alternate;
+}
+
+@keyframes waterDrift {
+  0%   { filter: brightness(1)    saturate(1); }
+  40%  { filter: brightness(1.06) saturate(1.1); }
+  100% { filter: brightness(1.02) saturate(1.05); }
+}
+
+/* Caustic light patches — flickering light refracted through water */
+.caustic {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  animation: causticFlicker var(--dur, 4s) ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.c1 {
+  width: 340px; height: 200px;
+  background: radial-gradient(ellipse, #1a8fb822 0%, transparent 70%);
+  top: 30%; left: 25%;
+  --dur: 5.2s;
+  animation-delay: 0s;
+}
+
+.c2 {
+  width: 260px; height: 160px;
+  background: radial-gradient(ellipse, #0e7fa422 0%, transparent 70%);
+  top: 50%; left: 60%;
+  --dur: 3.8s;
+  animation-delay: -1.5s;
+}
+
+.c3 {
+  width: 200px; height: 280px;
+  background: radial-gradient(ellipse, #156d9a1a 0%, transparent 70%);
+  top: 20%; left: 70%;
+  --dur: 6.1s;
+  animation-delay: -3s;
+}
+
+@keyframes causticFlicker {
+  0%   { opacity: 0.4; transform: scale(1)    rotate(0deg); }
+  50%  { opacity: 0.8; transform: scale(1.15) rotate(3deg); }
+  100% { opacity: 0.5; transform: scale(0.9)  rotate(-2deg); }
+}
+
+/* Boat deck edge — the floor you're standing on at the top of screen */
+.boat-deck {
+  position: absolute;
+  top: 0; left: -5%; right: -5%;
+  height: 80px;
+  background: linear-gradient(180deg, #0a0c0e 0%, #0d1117 60%, transparent 100%);
+  border-bottom: 1px solid #1e2d3d22;
+
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #1a3a5c66, #1f6feb44, #1a3a5c66, transparent);
+  }
+}
+
+/* Floating debris specks on the water surface */
+.speck {
+  position: absolute;
+  width: 4px; height: 4px;
+  background: #c8a96e88;
+  border-radius: 50%;
+  animation: speckDrift var(--sd, 8s) ease-in-out infinite alternate;
+
+  &.large {
+    width: 7px; height: 3px;
+    background: #9ecde888;
+    border-radius: 3px;
+  }
+}
+
+@keyframes speckDrift {
+  0%   { transform: translate(0, 0); }
+  100% { transform: translate(6px, 8px); }
+}
+
+/* ── Hero text ──────────────────────────────────────── */
+
+.hero-text {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  max-width: 620px;
+  padding: 40px 48px;
+  will-change: transform, opacity;
+  background: #00000066;
+  backdrop-filter: blur(10px);
+  border: 1px solid #ffffff18;
+  border-radius: 16px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #58a6ff;
+  border: 1px solid #1f6feb55;
+  background: #1f6feb0e;
+  border-radius: 20px;
+  padding: 5px 16px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(6px);
+}
+
+h1 {
+  font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: #ffffff;
+  margin-bottom: 18px;
+  text-shadow: 0 2px 16px #000000cc;
+}
+
+.accent { color: #58a6ff; }
+
+.subtitle {
+  color: #ffffffcc;
+  font-size: 15px;
+  margin-bottom: 32px;
+  line-height: 1.7;
+  text-shadow: 0 1px 8px #000000bb;
+}
+
+.cta-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+
+  a { text-decoration: none; }
+
+  button { padding: 13px 30px; font-size: 14px; letter-spacing: 0.3px; }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    padding: 13px 30px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    backdrop-filter: blur(4px);
+    background: #ffffff08;
+    &:hover { border-color: #58a6ff; background: #1f6feb14; }
+  }
+}
+
+/* ── Scroll hint ─────────────────────────────────────── */
+
+.scroll-hint {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #8b949e;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.scroll-arrow {
+  width: 16px; height: 16px;
+  border-right: 2px solid #58a6ff88;
+  border-bottom: 2px solid #58a6ff88;
+  transform: rotate(45deg);
+  animation: bounce 1.4s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: rotate(45deg) translateY(0); }
+  50%       { transform: rotate(45deg) translateY(4px); }
+}
+
+/* ── Stats ──────────────────────────────────────────── */
+
+.stats {
+  background: #161b22;
+  border-top: 1px solid #30363d;
+  border-bottom: 1px solid #30363d;
+  padding: 40px 24px;
+}
+
+.stats-inner {
+  max-width: 800px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  text-align: center;
+
+  @media (max-width: 600px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #58a6ff;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #8b949e;
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Features ───────────────────────────────────────── */
+
+.features { padding: 72px 24px; }
+
+.features-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.feature-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 28px 24px;
+  transition: border-color 0.2s, transform 0.2s;
+
+  &:hover { border-color: #1f6feb; transform: translateY(-2px); }
+}
+
+.feature-icon { font-size: 2rem; margin-bottom: 14px; }
+h3 { font-size: 16px; font-weight: 600; color: #e6edf3; margin-bottom: 8px; }
+p  { color: #8b949e; font-size: 13px; line-height: 1.6; margin-bottom: 16px; }
+a  { font-size: 13px; color: #58a6ff; }
