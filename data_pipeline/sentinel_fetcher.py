@@ -38,75 +38,51 @@ SH_CLIENT_ID = os.getenv("SH_CLIENT_ID", os.getenv("SENTINEL_HUB_CLIENT_ID", "")
 SH_CLIENT_SECRET = os.getenv("SH_CLIENT_SECRET", os.getenv("SENTINEL_HUB_CLIENT_SECRET", ""))
 SH_BASE_URL = os.getenv("SH_BASE_URL", "").strip()
 
-# Custom Evalscript for stricter debris proxy over water
 EVALSCRIPT = """
 //VERSION=3
-function setup() {
-  return {
-    input: ["B02", "B03", "B04", "B08"],
-    output: { bands: 1, sampleType: "UINT8" }
-  };
-}
 
-function evaluatePixel(sample) {
-    // 1. Keep likely water pixels, but not overly restrictive
-  let ndwiNumerator = sample.B03 - sample.B08;
-  let ndwiDenominator = sample.B03 + sample.B08;
-  let ndwi = (ndwiDenominator !== 0) ? ndwiNumerator / ndwiDenominator : 0;
-
-    // 2. Keep anomaly checks strict-but-not-zero
-    let ndviNumerator = sample.B08 - sample.B04;
-    let ndviDenominator = sample.B08 + sample.B04;
-    let ndvi = (ndviDenominator !== 0) ? ndviNumerator / ndviDenominator : 0;
-
-    let redGreenRatio = sample.B04 / (sample.B03 + 1.0);
-
-    if (
-        ndwi > 0.02 &&
-        sample.B08 > 0.03 &&
-        ndvi > -0.20 && ndvi < 0.35 &&
-        redGreenRatio > 0.80 && redGreenRatio < 1.60
-    ) {
-    return [1];
-  }
-  return [0];
-}
-"""
-
-RELAXED_EVALSCRIPT = """
-//VERSION=3
 function setup() {
     return {
-        input: ["B02", "B03", "B04", "B08"],
+        input: ["B03", "B04", "B06", "B08", "B11"],
         output: { bands: 1, sampleType: "UINT8" }
     };
 }
 
 function evaluatePixel(sample) {
-    let ndwiNumerator = sample.B03 - sample.B08;
-    let ndwiDenominator = sample.B03 + sample.B08;
-    let ndwi = (ndwiDenominator !== 0) ? ndwiNumerator / ndwiDenominator : 0;
 
-    let ndviNumerator = sample.B08 - sample.B04;
-    let ndviDenominator = sample.B08 + sample.B04;
-    let ndvi = (ndviDenominator !== 0) ? ndviNumerator / ndviDenominator : 0;
+    // ── 1. NDWI  (McFeeters: Green - NIR / Green + NIR) ──────────────
+    let ndwiNum = sample.B03 - sample.B08;
+    let ndwiDen = sample.B03 + sample.B08;
+    let ndwi = (ndwiDen !== 0) ? ndwiNum / ndwiDen : 0;
 
-    let redGreenRatio = sample.B04 / (sample.B03 + 1.0);
+    // ── 2. FDI  (Biermann et al. 2020) ───────────────────────────────
+    // FDI = NIR - (RE2 + (SWIR1 - RE2) * ((λNIR - λRED) / (λSWIR1 - λRED)) * 10)
+    // λ: B8=842nm, B4=665nm, B6=740nm, B11=1610nm
+    let factor = (842 - 665) / (1610 - 665); // ≈ 0.1873
+    let fdi = sample.B08 - (sample.B06 + (sample.B11 - sample.B06) * factor * 10);
 
+    // ── 3. NDVI  (NIR - Red / NIR + Red) ─────────────────────────────
+    let ndviNum = sample.B08 - sample.B04;
+    let ndviDen = sample.B08 + sample.B04;
+    let ndvi = (ndviDen !== 0) ? ndviNum / ndviDen : 0;
+
+    // ── 4. DETECTION LOGIC ────────────────────────────────────────────
+    //   • ndwi > 0.01        → pixel is on water
+    //   • fdi > 0.02      → anomalous reflectance = floating material
+    //   • ndvi < 0.2      → not vegetation / seaweed
     if (
-        ndwi > -0.05 &&
-        sample.B08 > 0.015 &&
-        ndvi > -0.35 && ndvi < 0.45 &&
-        redGreenRatio > 0.60 && redGreenRatio < 2.20
+        ndwi > 0.01   &&   // must be water
+        fdi  > 0.02   &&   // floating debris signal
+        ndvi < 0.20        // exclude algae / seaweed
     ) {
-        return [1];
+        return [1];        // debris detected
     }
-    return [0];
+    return [0];            // no debris
 }
 """
 
-# Bounding box near Lagos coast / Gulf of Guinea (high coastal debris likelihood)
-BBOX_COORDS = [3.00, 6.20, 4.20, 6.90]
+# Bounding box over Port of Constanta (Romania)
+BBOX_COORDS = [28.55, 44.05, 28.75, 44.22] #BOXU ASTA TRB SA FIE FACUT PE COORDONATELE MARINARULUI LA MARE.
 bbox = BBox(bbox=BBOX_COORDS, crs=CRS.WGS84)
 
 # Time window for query (default: last 30 days, to increase chance of available scenes)
