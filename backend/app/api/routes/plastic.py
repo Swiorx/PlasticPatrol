@@ -365,8 +365,13 @@ def delete_all_plastic_debris(
 ):
     """
     [BUTON ADMIN] Șterge ABSOLUT TOATE deșeurile de plastic din baza de date.
-    Atenție: Acțiune ireversibilă! Doar utilizatorii autentificați o pot rula.
+    Atenție: Acțiune ireversibilă! Doar utilizatorii autorizați o pot rula.
     """
+    if not current_user.is_authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Doar personalul autorizat poate șterge toate deșeurile."
+        )
     db.query(PlasticDebris).delete()
     db.commit()
     return None
