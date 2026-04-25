@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService, DebrisOut } from '../../services/api.service';
 import { CollectOverlayComponent } from '../collect-overlay/collect-overlay';
+import { Header } from '../header/header';
 
 const RADIUS_KM = 12;
 const POST_LOCATION_MIN_INTERVAL_MS = 30_000;
@@ -12,7 +13,7 @@ const COLLECT_RADIUS_M = 100;
 @Component({
   selector: 'app-map',
   standalone: true,
-  imports: [CommonModule, CollectOverlayComponent],
+  imports: [CommonModule, CollectOverlayComponent, Header],
   templateUrl: './map.html',
   styleUrl: './map.scss'
 })
@@ -44,7 +45,7 @@ export class Map implements OnInit, OnDestroy {
     @Inject(PLATFORM_ID) private platformId: Object,
     private cdr: ChangeDetectorRef,
     private api: ApiService
-  ) {}
+  ) { }
 
   async ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -55,7 +56,7 @@ export class Map implements OnInit, OnDestroy {
     this.map = L.map('map-container').setView([51.505, -0.09], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(this.map);
+    }).addTo(this.map);;
 
     this.debrisLayer = L.layerGroup().addTo(this.map);
 
@@ -158,8 +159,8 @@ export class Map implements OnInit, OnDestroy {
       const color = d.is_reserved
         ? '#f59e0b'
         : d.size_category === 'large' ? '#ef4444'
-        : d.size_category === 'medium' ? '#f97316'
-        : '#3b82f6';
+          : d.size_category === 'medium' ? '#f97316'
+            : '#3b82f6';
 
       const icon = this.L.divIcon({
         className: '',

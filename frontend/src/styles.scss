@@ -5,7 +5,12 @@ html {
     padding: 0;
     width: 100%;
     height: 100%;
-    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Montserrat', 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
 }
 
 @mixin glass {

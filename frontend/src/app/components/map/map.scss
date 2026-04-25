@@ -1,8 +1,7 @@
 .map-wrapper {
   position: relative;
   width: 100vw;
-  height: calc(100vh - 80px); /* Adjust based on your header size if any, or 100vh for full */
-  min-height: 80vh;
+  height: 100vh;
 }
 
 #map-container {
@@ -13,7 +12,7 @@
 
 .info-overlay {
   position: absolute;
-  top: 20px;
+  top: 200px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(255, 255, 255, 0.9);
@@ -63,7 +62,10 @@
     border-radius: 4px;
     font-size: 0.9rem;
 
-    &:disabled { background: #999; cursor: default; }
+    &:disabled {
+      background: #999;
+      cursor: default;
+    }
   }
 }
 

@@ -1,0 +1,134 @@
+@use '../../../styles.scss' as *;
+
+$light-teal: #000000;
+$username-color: #5c43dc;
+
+.navi {
+    z-index: 1000;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 2.5rem;
+    box-sizing: border-box;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    color: $light-teal;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+}
+
+// ── Left: user greeting ──
+.nav-left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.user-greeting {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: $username-color;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+// ── Center: nav links ──
+.nav-center {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    li a {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: $light-teal;
+        padding: 0.4rem 0.9rem;
+        border-radius: 6px;
+        letter-spacing: 0.03em;
+        transition: color 0.25s ease, background 0.25s ease,
+            backdrop-filter 0.25s ease, box-shadow 0.25s ease,
+            border-radius 0.25s ease;
+
+        &:hover {
+            color: #111;
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(24px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+        }
+    }
+}
+
+// ── Right: logout / login+register ──
+.nav-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.8rem;
+}
+
+.btn-logout {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.45rem 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 80, 80, 0.12);
+    color: $light-teal;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: color 0.25s ease, background 0.25s ease,
+        backdrop-filter 0.25s ease, box-shadow 0.25s ease,
+        border-radius 0.25s ease, border-color 0.25s ease;
+
+    &:hover {
+        color: #111;
+        background: rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(24px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        border-color: rgba(255, 255, 255, 0.4);
+        border-radius: 12px;
+    }
+}
+
+.btn-login,
+.btn-register {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: $light-teal;
+    padding: 0.45rem 1.2rem;
+    border-radius: 8px;
+    letter-spacing: 0.03em;
+    transition: color 0.25s ease, background 0.25s ease,
+        backdrop-filter 0.25s ease, box-shadow 0.25s ease,
+        border-radius 0.25s ease;
+
+    &:hover {
+        color: #111;
+        background: rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(24px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        border-radius: 12px;
+    }
+}
+
+.btn-register {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}

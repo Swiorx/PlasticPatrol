@@ -1,13 +1,21 @@
-<nav class="navigation">
-    <ul class="nav-links">
+<nav class="navi">
+    <div class="nav-left">
+        @if (auth.currentUser(); as user) {
+        <span class="user-greeting">Hi, {{ user.username }}!</span>
+        }
+    </div>
+
+    <ul class="nav-center">
         <li><a routerLink="/">Home</a></li>
         <li><a routerLink="/map">Map</a></li>
-        @if (auth.currentUser(); as user) {
-            <li class="user">Hi, {{ user.username }}</li>
-            <li><button type="button" class="btn-logout" (click)="logout()">Logout</button></li>
-        } @else {
-            <li><a routerLink="/login" class="btn-login">Login</a></li>
-            <li><a routerLink="/register" class="btn-register">Register</a></li>
-        }
     </ul>
+
+    <div class="nav-right">
+        @if (auth.currentUser()) {
+        <button type="button" class="btn-logout" (click)="logout()">Logout</button>
+        } @else {
+        <a routerLink="/login" class="btn-login">Login</a>
+        <a routerLink="/register" class="btn-register">Register</a>
+        }
+    </div>
 </nav>
