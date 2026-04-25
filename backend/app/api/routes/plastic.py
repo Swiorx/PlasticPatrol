@@ -149,3 +149,39 @@ def collect_plastic_debris(
             "message": "Deșeu din ocean marcat ca și colectat. "
                        "Punctele se vor acorda DUPĂ verificarea independentă prin satelit."
         }
+
+@router.delete("/all/clear", status_code=status.HTTP_204_NO_CONTENT)
+def delete_all_plastic_debris(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    [BUTON ADMIN] Șterge ABSOLUT TOATE deșeurile de plastic din baza de date.
+    Atenție: Acțiune ireversibilă! Doar utilizatorii autentificați o pot rula.
+    """
+    db.query(PlasticDebris).delete()
+    db.commit()
+    return None
+
+from fastapi import BackgroundTasks
+
+@router.post("/scan/start", status_code=status.HTTP_202_ACCEPTED)
+def trigger_satellite_scan(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    [BUTON ADMIN] Pornește scanarea din satelit (sentinel_fetcher.py) la comandă.
+    Scanarea se va rula în fundal (Background Task) deoarece poate dura câteva minute 
+    să descarce pozele și să le proceseze, iar noi nu vrem să blocăm serverul!
+    """
+    from data_pipeline.sentinel_fetcher import fetch_and_process
+    
+    # Adaugă execuția în coada de fundal a FastAPI-ului
+    background_tasks.add_task(fetch_and_process)
+    
+    return {
+        "message": "Comanda a fost trimisă cu succes către satelit! "
+                   "Scanarea rulează acum în fundal. Dă un refresh la lista de plastic "
+                   "în câteva minute pentru a vedea noile rezultate."
+    }
