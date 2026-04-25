@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, PLATFORM_ID, Inject, ChangeDetectorRef } from '@angular/core';
+import { Component, AfterViewInit, OnDestroy, PLATFORM_ID, Inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService, DebrisOut } from '../../services/api.service';
@@ -17,7 +17,7 @@ const COLLECT_RADIUS_M = 100;
   templateUrl: './map.html',
   styleUrl: './map.scss'
 })
-export class Map implements OnInit, OnDestroy {
+export class Map implements AfterViewInit, OnDestroy {
   latitude: number | null = null;
   longitude: number | null = null;
   errorMsg: string | null = null;
@@ -47,7 +47,7 @@ export class Map implements OnInit, OnDestroy {
     private api: ApiService
   ) { }
 
-  async ngOnInit() {
+  async ngAfterViewInit() {
     if (!isPlatformBrowser(this.platformId)) return;
 
     const L = await import('leaflet');
@@ -65,7 +65,7 @@ export class Map implements OnInit, OnDestroy {
       navigator.geolocation.getCurrentPosition(
         (pos) => this.onPosition(pos),
         (err) => this.handleGeoError(err),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
       );
 
       // 2) Live high-accuracy updates after that
