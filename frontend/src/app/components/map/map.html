@@ -7,6 +7,13 @@
     } @else if (latitude !== null && longitude !== null) {
       <p>Lat: {{ latitude | number:'1.4-4' }}</p>
       <p>Lng: {{ longitude | number:'1.4-4' }}</p>
+      <p>Debris nearby (12 km): {{ debrisCount }}</p>
+      <button type="button" (click)="refreshSatellite()" [disabled]="refreshing">
+        {{ refreshing ? 'Scanning...' : 'Refresh satellite scan' }}
+      </button>
+      @if (statusMsg) {
+        <p class="status">{{ statusMsg }}</p>
+      }
     } @else {
       <p>Locating...</p>
     }

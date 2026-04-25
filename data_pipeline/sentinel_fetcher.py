@@ -393,6 +393,131 @@ def extract_relevant_coordinates(mask, bbox_coords, min_component_pixels, max_re
     return coordinates
 
 
+def _build_sh_config():
+    if not SH_CLIENT_ID or not SH_CLIENT_SECRET:
+        raise RuntimeError(
+            "Missing Sentinel Hub credentials. Set SH_CLIENT_ID and SH_CLIENT_SECRET in backend/.env"
+        )
+    sh_config = SHConfig()
+    sh_config.sh_client_id = SH_CLIENT_ID
+    sh_config.sh_client_secret = SH_CLIENT_SECRET
+
+    request_collection = DataCollection.SENTINEL2_L2A
+    if SH_BASE_URL:
+        sh_config.sh_base_url = SH_BASE_URL
+        request_collection = DataCollection.SENTINEL2_L2A.define_from(
+            "SENTINEL2_L2A_CUSTOM",
+            service_url=SH_BASE_URL,
+        )
+        if "dataspace.copernicus.eu" in SH_BASE_URL:
+            sh_config.sh_token_url = (
+                "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
+            )
+    return sh_config, request_collection
+
+
+def fetch_for_bbox(bbox_coords,
+                   *,
+                   use_mock=None,
+                   target_resolution_m=None,
+                   max_dimension=None,
+                   start_date=None,
+                   end_date=None,
+                   min_component_pixels=None,
+                   max_relevant_points=None):
+    """Run the Sentinel evalscript on `bbox_coords` and return [(lat, lon), ...] centroids.
+
+    Pure function — no DB writes. Reusable from HTTP endpoints.
+    bbox_coords: [min_lon, min_lat, max_lon, max_lat]
+    """
+    if use_mock is None:
+        use_mock = USE_MOCK_DATA
+    if target_resolution_m is None:
+        target_resolution_m = TARGET_RESOLUTION_METERS
+    if max_dimension is None:
+        max_dimension = MAX_GRID_DIMENSION
+    if min_component_pixels is None:
+        min_component_pixels = MIN_COMPONENT_PIXELS
+    if max_relevant_points is None:
+        max_relevant_points = MAX_RELEVANT_POINTS
+
+    width, height = grid_for_10m_resolution(
+        bbox_coords,
+        target_resolution_meters=target_resolution_m,
+        max_dimension=max_dimension,
+    )
+
+    if use_mock:
+        mask = get_mock_mask(height, width)
+    else:
+        sh_config, request_collection = _build_sh_config()
+
+        end_dt = end_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        start_dt = start_date or (
+            datetime.now(timezone.utc) - timedelta(days=30)
+        ).strftime("%Y-%m-%d")
+
+        request = SentinelHubRequest(
+            evalscript=EVALSCRIPT,
+            input_data=[
+                SentinelHubRequest.input_data(
+                    data_collection=request_collection,
+                    time_interval=(f"{start_dt}T00:00:00Z", f"{end_dt}T23:59:59Z"),
+                    maxcc=0.8,
+                    mosaicking_order=MosaickingOrder.MOST_RECENT,
+                )
+            ],
+            responses=[SentinelHubRequest.output_response("default", MimeType.TIFF)],
+            bbox=BBox(bbox=bbox_coords, crs=CRS.WGS84),
+            size=[width, height],
+            config=sh_config,
+        )
+        response = request.get_data(save_data=False)
+        mask = response[0].astype(np.uint8)
+
+    return extract_relevant_coordinates(
+        mask,
+        bbox_coords,
+        min_component_pixels=min_component_pixels,
+        max_relevant_points=max_relevant_points,
+    )
+
+
+def insert_new_debris(db, coordinates):
+    """Insert (lat, lon) tuples as new PlasticDebris rows, skipping duplicates within 100m.
+
+    Returns the number of inserted rows.
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(ROOT_DIR / "backend"))
+    from app.db.models import PlasticDebris
+    from geoalchemy2.types import Geography
+    from sqlalchemy import cast
+
+    inserted_count = 0
+    for lat, lon in coordinates:
+        point = WKTElement(f"SRID=4326;POINT({lon} {lat})")
+        existing = db.query(PlasticDebris).filter(
+            PlasticDebris.is_collected == False,
+            func.ST_DWithin(cast(PlasticDebris.geom, Geography), cast(point, Geography), 100)
+        ).first()
+
+        if not existing:
+            new_debris = PlasticDebris(
+                geom=point,
+                size_category="small",
+                detected_at=datetime.now(timezone.utc),
+                is_collected=False,
+                is_verified=False,
+                eco_points=5,
+            )
+            db.add(new_debris)
+            inserted_count += 1
+
+    db.commit()
+    return inserted_count
+
+
 def fetch_and_process():
     region_requests = resolve_region_requests()
 

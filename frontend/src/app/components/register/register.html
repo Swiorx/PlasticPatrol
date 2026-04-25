@@ -1,0 +1,28 @@
+<div class="auth-page">
+  <h1>Register</h1>
+  <form (ngSubmit)="submit()" #f="ngForm">
+    <label>
+      Username
+      <input type="text" name="username" [(ngModel)]="username" required minlength="3" autocomplete="username" />
+    </label>
+    <label>
+      Email
+      <input type="email" name="email" [(ngModel)]="email" required autocomplete="email" />
+    </label>
+    <label>
+      Password (min. 8 chars)
+      <input type="password" name="password" [(ngModel)]="password" required minlength="8" autocomplete="new-password" />
+    </label>
+    <label>
+      Confirm password
+      <input type="password" name="confirmPassword" [(ngModel)]="confirmPassword" required autocomplete="new-password" />
+    </label>
+    @if (errorMsg) {
+      <p class="error">{{ errorMsg }}</p>
+    }
+    <button type="submit" [disabled]="loading || f.invalid">
+      {{ loading ? 'Creating account...' : 'Register' }}
+    </button>
+  </form>
+  <p>Already have an account? <a routerLink="/login">Login</a></p>
+</div>

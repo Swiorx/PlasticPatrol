@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float
 from sqlalchemy.ext.declarative import declarative_base
 from geoalchemy2 import Geometry
 from datetime import datetime, timezone
@@ -15,7 +15,10 @@ class User(Base):
     is_authorized = Column(Boolean, default=False) # True pentru personal autorizat
     hashed_password = Column(String, nullable=False)
     eco_points = Column(Integer, default=0)
-    
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    last_location_at = Column(DateTime, nullable=True)
+
 
 class PlasticDebris(Base):
     __tablename__ = "plastic_debris"

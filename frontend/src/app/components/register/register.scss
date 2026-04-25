@@ -1,0 +1,47 @@
+.auth-page {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: sans-serif;
+
+  h1 { margin-top: 0; }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+  }
+
+  input {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 1rem;
+  }
+
+  button {
+    padding: 0.6rem;
+    cursor: pointer;
+    background: #26a;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    font-size: 1rem;
+
+    &:disabled { background: #999; cursor: default; }
+  }
+
+  .error {
+    color: #c33;
+    margin: 0;
+  }
+}

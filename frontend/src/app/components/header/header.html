@@ -1,0 +1,13 @@
+<nav class="navigation">
+    <ul class="nav-links">
+        <li><a routerLink="/">Home</a></li>
+        <li><a routerLink="/map">Map</a></li>
+        @if (auth.currentUser(); as user) {
+            <li class="user">Hi, {{ user.username }}</li>
+            <li><button type="button" class="btn-logout" (click)="logout()">Logout</button></li>
+        } @else {
+            <li><a routerLink="/login" class="btn-login">Login</a></li>
+            <li><a routerLink="/register" class="btn-register">Register</a></li>
+        }
+    </ul>
+</nav>
