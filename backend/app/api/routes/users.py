@@ -1,5 +1,6 @@
 # Rute pentru profilul utilizatorilor + autentificare + locație + scanare satelit per user.
 # backend/app/api/routes/users.py
+import math
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ from geoalchemy2.elements import WKTElement
 from geoalchemy2.types import Geography
 
 from app.db.session import get_db
-from app.db.models import User, PlasticDebris
+from app.db.models import User, PlasticDebris, ClusterReservation
 from app.schemas.user import UserCreate, UserOut, LocationIn, TokenOut, DebrisOut
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.api.deps import get_current_user
@@ -94,6 +95,49 @@ def update_my_location(
     return current_user
 
 
+def _haversine_m_u(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6371000.0
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = math.sin(d_lat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2)**2
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+def _cluster_points_u(points: list, max_distance_m: float = 1000.0) -> list:
+    if not points:
+        return []
+    parent = list(range(len(points)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(a: int, b: int) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    for i in range(len(points)):
+        for j in range(i + 1, len(points)):
+            if _haversine_m_u(points[i]["lat"], points[i]["lon"], points[j]["lat"], points[j]["lon"]) <= max_distance_m:
+                union(i, j)
+
+    groups: dict = {}
+    for idx in range(len(points)):
+        groups.setdefault(find(idx), []).append(idx)
+    return list(groups.values())
+
+
+def _classify_cluster_u(size: int) -> tuple:
+    if size <= 2:
+        return "small", 2
+    if size <= 4:
+        return "medium", 4
+    return "large", 6
+
+
 @router.get("/me/debris", response_model=List[DebrisOut])
 def get_my_debris(
     radius_km: float = Query(12.0, ge=1.0, le=50.0),
@@ -103,10 +147,15 @@ def get_my_debris(
     if current_user.latitude is None or current_user.longitude is None:
         raise HTTPException(status_code=400, detail="Location not set")
 
-    user_point = WKTElement(
-        f"SRID=4326;POINT({current_user.longitude} {current_user.latitude})"
-    )
+    user_point = WKTElement(f"SRID=4326;POINT({current_user.longitude} {current_user.latitude})")
     radius_m = radius_km * 1000.0
+
+    # Find current user's active reservation
+    active_reservation = db.query(ClusterReservation).filter(
+        ClusterReservation.reserved_by == current_user.id,
+        ClusterReservation.status.in_(("reserved", "photo_verified")),
+    ).first()
+    my_point_ids: set = set(active_reservation.point_ids) if active_reservation else set()
 
     rows = (
         db.query(
@@ -119,23 +168,53 @@ def get_my_debris(
                 cast(PlasticDebris.geom, Geography),
                 cast(user_point, Geography),
                 radius_m,
-            )
+            ),
+            PlasticDebris.is_collected == False,
         )
         .all()
     )
 
-    return [
-        DebrisOut(
-            id=d.id,
-            latitude=lat,
-            longitude=lon,
-            size_category=d.size_category or "small",
-            is_collected=bool(d.is_collected),
-            is_verified=bool(d.is_verified),
-            eco_points=d.eco_points or 0,
-        )
-        for d, lon, lat in rows
+    # Exclude points reserved by OTHER users (keep own reserved points)
+    filtered = [
+        (d, lon, lat) for d, lon, lat in rows
+        if not d.is_reserved or d.id in my_point_ids
     ]
+
+    raw_points = [
+        {"id": d.id, "lat": float(lat), "lon": float(lon),
+         "is_collected": bool(d.is_collected), "is_verified": bool(d.is_verified),
+         "eco_points": d.eco_points or 0}
+        for d, lon, lat in filtered
+    ]
+
+    clusters = _cluster_points_u(raw_points)
+    result = []
+    for i, cluster in enumerate(clusters, start=1):
+        pts = [raw_points[j] for j in cluster]
+        size = len(pts)
+        center_lat = sum(p["lat"] for p in pts) / size
+        center_lon = sum(p["lon"] for p in pts) / size
+        radius = max((_haversine_m_u(center_lat, center_lon, p["lat"], p["lon"]) for p in pts), default=0.0)
+        size_cat, eco = _classify_cluster_u(size)
+        ids = [p["id"] for p in pts]
+        is_reserved = bool(my_point_ids & set(ids))
+
+        result.append(DebrisOut(
+            id=f"cluster-{i}",
+            latitude=center_lat,
+            longitude=center_lon,
+            size_category=size_cat,
+            is_collected=all(p["is_collected"] for p in pts),
+            is_verified=all(p["is_verified"] for p in pts),
+            eco_points=eco,
+            source_point_ids=ids,
+            source_point_count=size,
+            radius_m=radius,
+            is_reserved=is_reserved,
+            reservation_id=active_reservation.id if is_reserved else None,
+        ))
+
+    return result
 
 
 @router.post("/me/refresh-satellite")

@@ -1,5 +1,7 @@
 # Clase Pydantic pentru validarea datelor despre utilizatori.
 
+from typing import List, Optional
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
@@ -54,10 +56,18 @@ class TokenOut(BaseModel):
 
 
 class DebrisOut(BaseModel):
-    id: int
+    id: str
     latitude: float
     longitude: float
     size_category: str
     is_collected: bool
     is_verified: bool
     eco_points: int
+    source_point_ids: List[int]
+    source_point_count: int
+    radius_m: float
+    is_reserved: bool
+    reservation_id: Optional[int]
+
+    class Config:
+        from_attributes = True
