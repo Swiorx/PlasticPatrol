@@ -1,18 +1,36 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast
 from geoalchemy2.functions import ST_AsText
 from geoalchemy2.types import Geography
 from geoalchemy2.elements import WKTElement
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timezone
+from pydantic import BaseModel
 import subprocess
 import sys
+import json
+import time
 
 from app.db.session import get_db
-from app.db.models import PlasticDebris, User
+from app.db.models import PlasticDebris, User, Notification
 from app.api.deps import get_current_user
 from app.schemas.plastic import PlasticReportCreate
+
+# Rate limiting simplu in-memory (per user_id -> timestamp ultimei acțiuni)
+_rate_limit_store: dict = {}
+RATE_LIMIT_SECONDS = 5  # Minim 5 secunde între acțiuni critice
+
+def check_rate_limit(user_id: int, action: str = "default"):
+    key = f"{user_id}:{action}"
+    now = time.time()
+    last = _rate_limit_store.get(key, 0)
+    if now - last < RATE_LIMIT_SECONDS:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Prea multe cereri. Așteaptă {RATE_LIMIT_SECONDS} secunde între acțiuni."
+        )
+    _rate_limit_store[key] = now
 
 router = APIRouter()
 
@@ -89,7 +107,16 @@ def report_plastic_debris(
     """
     Raportează manual un deșeu găsit pe plajă. 
     Se apelează de obicei după ce poza e verificată de `/api/classify`.
+    Validare: coordonatele trebuie să fie pe suprafața Pământului.
     """
+    check_rate_limit(current_user.id, "report")
+
+    # Validare coordonate
+    if not (-90 <= report.lat <= 90):
+        raise HTTPException(status_code=422, detail="Latitudinea trebuie să fie între -90 și 90.")
+    if not (-180 <= report.lon <= 180):
+        raise HTTPException(status_code=422, detail="Longitudinea trebuie să fie între -180 și 180.")
+
     point = WKTElement(f"SRID=4326;POINT({report.lon} {report.lat})")
     debris = PlasticDebris(
         geom=point,
@@ -115,6 +142,8 @@ def collect_plastic_debris(
     - Pe plajă (beach): doar utilizatorii autorizați pot strânge, primesc puncte instant.
     - Ocean: oricine poate strânge, punctele se primesc DUPĂ verificarea prin satelit.
     """
+    check_rate_limit(current_user.id, "collect")
+
     debris = db.query(PlasticDebris).filter(PlasticDebris.id == debris_id).first()
     if not debris:
         raise HTTPException(status_code=404, detail="Deșeul nu a fost găsit.")
@@ -137,6 +166,13 @@ def collect_plastic_debris(
         
         # Acordăm punctele instant (personal autorizat = încredere imediată)
         current_user.eco_points += debris.eco_points
+
+        # Notificăm utilizatorul
+        notif = Notification(
+            user_id=current_user.id,
+            message=f"🏦 Colectare plajă confirmată! Ai primit {debris.eco_points} puncte eco."
+        )
+        db.add(notif)
         db.commit()
         return {"message": f"Colectare reușită (personal autorizat)! Ai primit {debris.eco_points} puncte."}
     
@@ -145,7 +181,13 @@ def collect_plastic_debris(
         debris.is_collected = True
         debris.collected_by = current_user.id
         debris.collected_at = datetime.now(timezone.utc)
-        # NU setăm is_verified și NU acordăm punctele încă! Satelitul va decide.
+
+        # Notificăm utilizatorul că așteaptă verificare
+        notif = Notification(
+            user_id=current_user.id,
+            message=f"🛰️ Deșeul #{debris_id} a fost marcat ca și colectat. Așteaptă confirmarea satelitului pentru puncte."
+        )
+        db.add(notif)
         db.commit()
         return {
             "message": "Deșeu din ocean marcat ca și colectat. "
@@ -173,22 +215,84 @@ def trigger_satellite_scan(
     """
     [BUTON ADMIN] Pornește scanarea din satelit (sentinel_fetcher.py) ca sub-proces.
     Scriptul rulează în fundal, independent de serverul FastAPI.
+
+    Dacă credențialele Sentinel Hub nu sunt configurate, se folosesc
+    automat date mock (simulate) pentru testare.
     """
+    check_rate_limit(current_user.id, "scan")
+
+    import os
     from pathlib import Path
     project_root = Path(__file__).resolve().parents[3]
     script_path = project_root / "data_pipeline" / "sentinel_fetcher.py"
+
+    # Copiem env-ul curent și forțăm mock dacă nu avem credențiale SH
+    env = {**os.environ}
+    sh_id = os.getenv("SH_CLIENT_ID", os.getenv("SENTINEL_HUB_CLIENT_ID", ""))
+    sh_secret = os.getenv("SH_CLIENT_SECRET", os.getenv("SENTINEL_HUB_CLIENT_SECRET", ""))
+    if not sh_id or not sh_secret:
+        env["USE_MOCK_DATA"] = "1"
 
     def run_scan():
         subprocess.Popen(
             [sys.executable, str(script_path)],
             cwd=str(project_root),
-            env={**__import__('os').environ}
+            env=env
         )
 
     background_tasks.add_task(run_scan)
 
+    mock_note = " (MOD MOCK - fără credențiale Sentinel)" if env.get("USE_MOCK_DATA") == "1" else ""
+
     return {
-        "message": "Comanda a fost trimisă cu succes către satelit! "
+        "message": f"Comanda a fost trimisă cu succes către satelit{mock_note}! "
                    "Scanarea rulează acum în fundal. Dă un refresh la lista de plastic "
                    "în câteva minute pentru a vedea noile rezultate."
     }
+
+@router.get("/export/geojson")
+def export_geojson(db: Session = Depends(get_db)):
+    """
+    Exportă toate deșeurile de plastic în format GeoJSON.
+    Fișierul poate fi importat în QGIS, Google Earth, sau orice hartă interactivă.
+    """
+    results = db.query(
+        PlasticDebris.id,
+        func.ST_X(PlasticDebris.geom).label("lon"),
+        func.ST_Y(PlasticDebris.geom).label("lat"),
+        PlasticDebris.size_category,
+        PlasticDebris.detected_at,
+        PlasticDebris.is_collected,
+        PlasticDebris.is_verified,
+        PlasticDebris.eco_points
+    ).all()
+
+    features = []
+    for r in results:
+        feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [r.lon, r.lat]
+            },
+            "properties": {
+                "id": r.id,
+                "size_category": r.size_category,
+                "detected_at": r.detected_at.isoformat() if r.detected_at else None,
+                "is_collected": r.is_collected,
+                "is_verified": r.is_verified,
+                "eco_points": r.eco_points
+            }
+        }
+        features.append(feature)
+
+    geojson = {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
+    return Response(
+        content=json.dumps(geojson, ensure_ascii=False),
+        media_type="application/geo+json",
+        headers={"Content-Disposition": "attachment; filename=plastic_debris.geojson"}
+    )

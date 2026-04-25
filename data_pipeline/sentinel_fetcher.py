@@ -249,7 +249,7 @@ def fetch_and_process():
     # Force Python to see the backend directory before importing
     import sys
     sys.path.insert(0, str(ROOT_DIR / "backend"))
-    from app.db.models import PlasticDebris, User
+    from app.db.models import PlasticDebris, User, Notification
 
     from geoalchemy2.types import Geography
     from sqlalchemy import cast
@@ -284,6 +284,13 @@ def fetch_and_process():
                 user = db.query(User).filter(User.id == debris.collected_by).first()
                 if user:
                     user.eco_points += debris.eco_points
+                    # Notificăm utilizatorul că a primit punctele!
+                    notif = Notification(
+                        user_id=user.id,
+                        message=f"🛰️ Satelitul a confirmat curățarea deșeului #{debris.id}! "
+                                f"Ai primit {debris.eco_points} puncte eco. Mulțumim!"
+                    )
+                    db.add(notif)
                 verified_count += 1
 
     # 2. INSERARE PUNCTE NOI DETECTATE (Fără a crea duplicate)

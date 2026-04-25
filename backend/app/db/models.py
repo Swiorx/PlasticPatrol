@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from geoalchemy2 import Geometry
 from datetime import datetime, timezone
@@ -29,4 +29,14 @@ class PlasticDebris(Base):
     collected_by = Column(Integer, default=None) # ID-ul userului care a colectat
     collected_at = Column(DateTime, default=None) # Data colectării
     eco_points = Column(Integer, default=0) # Punctele care ar trebui acordate pentru colectare
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     

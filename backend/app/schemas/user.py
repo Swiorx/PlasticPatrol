@@ -1,4 +1,4 @@
-# Clase Pydantic pentru validarea datelor despre marinari.
+# Clase Pydantic pentru validarea datelor despre utilizatori.
 
 from pydantic import BaseModel, EmailStr
 
@@ -16,6 +16,8 @@ class UserOut(BaseModel):
     username: str
     email: EmailStr
     eco_points: int
+    is_active: bool
+    is_authorized: bool
 
     class Config:
         from_attributes = True
