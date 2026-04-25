@@ -39,10 +39,11 @@ No changes to `User` or `Notification`.
 - Auth: JWT required
 - Body: `{ point_ids: int[], center_lat: float, center_lon: float, eco_points: int }`
 - Logic:
-  1. Check none of `point_ids` have `is_reserved=True` — if any do, return 409 "Already reserved"
-  2. Create `ClusterReservation` with `status=reserved`, `reserved_until=now+24h`
-  3. Set `is_reserved=True` on all `PlasticDebris` rows in `point_ids`
-  4. Return reservation id and `reserved_until`
+  1. Check current user has no active reservation (`status IN ('reserved','photo_verified')`) — if they do, return 409 "You already have an active reservation"
+  2. Check none of `point_ids` have `is_reserved=True` — if any do, return 409 "Already reserved by another user"
+  3. Create `ClusterReservation` with `status=reserved`, `reserved_until=now+24h`
+  4. Set `is_reserved=True` on all `PlasticDebris` rows in `point_ids`
+  5. Return reservation id and `reserved_until`
 
 #### `POST /api/clusters/{reservation_id}/collect`
 - Auth: JWT required, must be `reserved_by` owner
@@ -150,4 +151,4 @@ Surfaces the following messages (existing notification bell):
 
 - Admin dashboard for reservation monitoring
 - Partial cluster collection (all-or-nothing per cluster)
-- Multiple concurrent reservations per user (one active reservation at a time is acceptable and simpler — not explicitly constrained but enforce if desired)
+- Multiple concurrent reservations per user — one active reservation at a time is enforced
