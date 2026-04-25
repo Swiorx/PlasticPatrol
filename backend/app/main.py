@@ -19,6 +19,7 @@ from app.api.routes import users, plastic
 from app.api.routes.classifier import router as classifier_router
 from app.api.routes.stats import router as stats_router
 from app.api.routes.notifications import router as notifications_router
+from app.api.routes.clusters import router as clusters_router
 
 # Creăm tabelele în baza de date pe baza modelelor definite anterior
 models.Base.metadata.create_all(bind=engine)
@@ -64,6 +65,7 @@ app.include_router(plastic.router, prefix="/api/plastics", tags=["plastics"])
 app.include_router(classifier_router, prefix="/api")
 app.include_router(stats_router, prefix="/api/stats", tags=["statistics"])
 app.include_router(notifications_router, prefix="/api/notifications", tags=["notifications"])
+app.include_router(clusters_router, prefix="/api/clusters", tags=["clusters"])
 
 @app.get("/", tags=["root"])
 def read_root():
