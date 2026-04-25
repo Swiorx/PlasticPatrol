@@ -1,0 +1,82 @@
+import math
+from datetime import timezone
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from app.db.models import PlasticDebris, ClusterReservation, User, Notification
+
+NEARBY_M = 100.0
+
+
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6371000.0
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = math.sin(d_lat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2) ** 2
+    return 2 * R * math.asin(math.sqrt(a))
+
+
+def verify_collected_debris(db: Session) -> None:
+    pending = db.query(
+        PlasticDebris,
+        func.ST_X(PlasticDebris.geom).label("lon"),
+        func.ST_Y(PlasticDebris.geom).label("lat"),
+    ).filter(
+        PlasticDebris.is_collected == True,
+        PlasticDebris.is_verified == False,
+    ).all()
+
+    for debris, lon, lat in pending:
+        if debris.collected_at is None:
+            continue
+
+        collected_at = debris.collected_at
+        if collected_at.tzinfo is None:
+            collected_at = collected_at.replace(tzinfo=timezone.utc)
+
+        # Check if any new uncollected point appeared near this location after collection
+        new_points = db.query(
+            PlasticDebris,
+            func.ST_X(PlasticDebris.geom).label("lon2"),
+            func.ST_Y(PlasticDebris.geom).label("lat2"),
+        ).filter(
+            PlasticDebris.is_collected == False,
+            PlasticDebris.is_reserved == False,
+            PlasticDebris.detected_at > collected_at,
+        ).all()
+
+        still_there = any(
+            _haversine_m(lat, lon, float(lat2), float(lon2)) <= NEARBY_M
+            for _, lon2, lat2 in new_points
+        )
+
+        owning_res = next(
+            (r for r in db.query(ClusterReservation).filter(
+                ClusterReservation.status == "photo_verified"
+            ).all() if debris.id in r.point_ids),
+            None,
+        )
+
+        if still_there:
+            debris.is_collected = False
+            debris.is_reserved = False
+            debris.collected_by = None
+            debris.collected_at = None
+            if owning_res:
+                owning_res.status = "failed"
+                db.add(Notification(
+                    user_id=owning_res.reserved_by,
+                    message="Satellite scan shows debris still present — collection could not be confirmed. No eco points awarded.",
+                ))
+        else:
+            debris.is_verified = True
+            if owning_res:
+                owning_res.status = "collected"
+                user = db.query(User).filter(User.id == owning_res.reserved_by).first()
+                if user:
+                    user.eco_points += owning_res.eco_points
+                    db.add(Notification(
+                        user_id=user.id,
+                        message=f"Satellite confirmed your collection! You earned {owning_res.eco_points} eco points.",
+                    ))
+
+    db.commit()

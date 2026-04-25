@@ -18,6 +18,7 @@ from app.schemas.user import UserCreate, UserOut, LocationIn, TokenOut, DebrisOu
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.api.deps import get_current_user
 from app.services.geo import bbox_for_user
+from app.services.sentinel_verify import verify_collected_debris
 
 # Make data_pipeline importable
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -158,4 +159,5 @@ def refresh_my_satellite(
         raise HTTPException(status_code=502, detail=f"Sentinel fetch failed: {exc}")
 
     inserted = insert_new_debris(db, coordinates)
+    verify_collected_debris(db)
     return {"inserted": inserted, "scanned_points": len(coordinates), "bbox": bbox}
