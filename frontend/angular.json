@@ -25,10 +25,8 @@
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              }
+              "public",
+              "src/assets"
             ],
             "styles": [
               "node_modules/leaflet/dist/leaflet.css",
