@@ -254,17 +254,18 @@ def print_tuning_help():
     print("\nFor more sensitivity: reduce MIN_COMPONENT_PIXELS. For less noise: increase it.")
 
 EVALSCRIPT = """
-//VERSION=3
 
+//VERSION=3
+ 
 function setup() {
     return {
         input: ["B03", "B04", "B06", "B08", "B11"],
         output: { bands: 1, sampleType: "UINT8" }
     };
 }
-
+ 
 function evaluatePixel(sample) {
-
+ 
     // ── STAGE 1: ABSOLUTE LAND KILL
     // Rooftops, roads, soil all have high SWIR — water never does
     if (sample.B11 > 0.07) return [0];
@@ -272,39 +273,43 @@ function evaluatePixel(sample) {
     if (sample.B08 > 0.15) return [0];
     // Urban/bare soil: red channel high relative to blue/green
     if (sample.B04 > 0.15) return [0];
-
+ 
     // ── STAGE 2: NDWI — must be clearly water
     let ndwiDen = sample.B03 + sample.B08;
     let ndwi = (ndwiDen !== 0) ? (sample.B03 - sample.B08) / ndwiDen : 0;
     if (ndwi < 0.10) return [0];  // anything below this is not water
-
+ 
     // ── STAGE 3: BAND RATIO WATER CONFIRMATION
     // Water: green dominates, red is low, NIR is very low
     // Land/roof: all bands relatively higher and more balanced
     let greenRedRatio = sample.B03 / (sample.B04 + 0.001);
     if (greenRedRatio < 1.0) return [0]; // red >= green = not water
-
+ 
     let nirGreenRatio = sample.B08 / (sample.B03 + 0.001);
     if (nirGreenRatio > 0.80) return [0]; // NIR too high relative to green = land
-
-    // ── STAGE 4: FDI
-    let factor = (842 - 665) / (1610 - 665);
-    let fdi = sample.B08 - (sample.B06 + (sample.B11 - sample.B06) * factor * 10);
-
+ 
+    // ── STAGE 4: FDI (Floating Debris Index)
+    // FDI = ρ_NIR - (ρ_RE + (ρ_SWIR - ρ_RE) * factor)
+    // where factor = (λ_NIR - λ_RE) / (λ_SWIR - λ_RE)
+    // Sentinel-2 bands: B8 (842 nm), B6 (740 nm), B11 (1610 nm)
+    let factor = (842 - 740) / (1610 - 740);
+    let fdi = sample.B08 - (sample.B06 + (sample.B11 - sample.B06) * factor);
+ 
     // ── STAGE 5: NDVI
     let ndviDen = sample.B08 + sample.B04;
     let ndvi = (ndviDen !== 0) ? (sample.B08 - sample.B04) / ndviDen : 0;
     if (ndvi > 0.08) return [0]; // any vegetation signal = reject
-
+ 
     // ── STAGE 6: WATER TYPE + DEBRIS THRESHOLD
     let isOcean   = (ndwi > 0.25 && sample.B08 < 0.05 && sample.B11 < 0.04);
     let isCoastal = (ndwi > 0.10 && ndwi <= 0.25 && sample.B08 < 0.10);
-
+ 
     if (isOcean   && fdi > 0.05) return [1];
     if (isCoastal && fdi > 0.03) return [1];
-
+ 
     return [0];
 }
+ 
 """
 
 # Bounding box (defaults to whole world). Override with SENTINEL_BBOX.
