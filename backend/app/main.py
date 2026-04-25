@@ -4,6 +4,9 @@ from pathlib import Path
 # Add project root to path so ml_classifier (sibling of backend/) is importable
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from contextlib import asynccontextmanager
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from app.scheduler import expire_reservations
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -38,8 +41,18 @@ tags_metadata = [
     {"name": "seed", "description": "Populare baza de date cu date de test (DEV ONLY)"},
 ]
 
+@asynccontextmanager
+async def lifespan(app_instance: FastAPI):
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(expire_reservations, "interval", minutes=5, id="expire_reservations")
+    scheduler.start()
+    yield
+    scheduler.shutdown(wait=False)
+
+
 app = FastAPI(
     title="PlasticPatrol API",
+    lifespan=lifespan,
     version="1.0.0",
     description="API pentru detectarea și colectarea deșeurilor de plastic din oceane și de pe plaje, "
                 "cu verificare prin satelit Sentinel-2 și gamificare ecologică.\n\n"

@@ -14,3 +14,4 @@ tensorflow>=2.14.0
 keras>=3.0.0
 opencv-python-headless>=4.8.0
 huggingface_hub>=0.20.0
+apscheduler
