@@ -11,6 +11,7 @@ import subprocess
 import sys
 import json
 import time
+import math
 import os
 from pathlib import Path
 
@@ -75,6 +76,122 @@ class SatelliteScanOptions(BaseModel):
         description="Forțează mock data (true/false). Dacă e null, decide automat după credențiale.",
     )
 
+
+MAX_CLUSTER_DISTANCE_M = 1000.0
+
+
+def haversine_distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in meters between two WGS84 points."""
+    earth_radius_m = 6371000.0
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = (
+        math.sin(d_lat / 2.0) ** 2
+        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2.0) ** 2
+    )
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return earth_radius_m * c
+
+
+def classify_cluster(cluster_size: int) -> tuple[str, int]:
+    """Map cluster size to category and eco points.
+
+    Note: user rule had overlap at 5 points (3-5 medium, 5+ large).
+    We prioritize large for 5+ so the mapping is deterministic.
+    """
+    if cluster_size <= 2:
+        return "small", 2
+    if cluster_size <= 4:
+        return "medium", 4
+    return "large", 6
+
+
+def cluster_points(points: list[dict], max_distance_m: float = MAX_CLUSTER_DISTANCE_M) -> list[list[int]]:
+    """Build connected components where any two points <= max_distance_m are linked."""
+    if not points:
+        return []
+
+    parent = list(range(len(points)))
+
+    def find(idx: int) -> int:
+        while parent[idx] != idx:
+            parent[idx] = parent[parent[idx]]
+            idx = parent[idx]
+        return idx
+
+    def union(a: int, b: int) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    for i in range(len(points)):
+        for j in range(i + 1, len(points)):
+            dist = haversine_distance_m(points[i]["lat"], points[i]["lon"], points[j]["lat"], points[j]["lon"])
+            if dist <= max_distance_m:
+                union(i, j)
+
+    groups: dict[int, list[int]] = {}
+    for idx in range(len(points)):
+        root = find(idx)
+        groups.setdefault(root, []).append(idx)
+
+    return list(groups.values())
+
+
+def build_clustered_features(rows, max_distance_m: float = MAX_CLUSTER_DISTANCE_M) -> list[dict]:
+    """Create aggregated cluster features from DB rows containing lon/lat data."""
+    raw_points = [
+        {
+            "id": r.id,
+            "lon": float(r.lon),
+            "lat": float(r.lat),
+            "detected_at": r.detected_at,
+            "is_collected": r.is_collected,
+            "is_verified": r.is_verified,
+        }
+        for r in rows
+    ]
+
+    clusters = cluster_points(raw_points, max_distance_m=max_distance_m)
+
+    features = []
+    for cluster_index, cluster in enumerate(clusters, start=1):
+        cluster_points_data = [raw_points[i] for i in cluster]
+        cluster_size = len(cluster_points_data)
+        center_lon = sum(p["lon"] for p in cluster_points_data) / cluster_size
+        center_lat = sum(p["lat"] for p in cluster_points_data) / cluster_size
+        radius_m = max(
+            haversine_distance_m(center_lat, center_lon, p["lat"], p["lon"])
+            for p in cluster_points_data
+        )
+        size_category, eco_points = classify_cluster(cluster_size)
+        newest_detected_at = max(
+            (p["detected_at"] for p in cluster_points_data if p["detected_at"] is not None),
+            default=None,
+        )
+
+        features.append(
+            {
+                "cluster_id": f"cluster-{cluster_index}",
+                "center_lon": center_lon,
+                "center_lat": center_lat,
+                "source_point_ids": [p["id"] for p in cluster_points_data],
+                "source_point_count": cluster_size,
+                "size_category": size_category,
+                "detected_at_center": {
+                    "lat": center_lat,
+                    "lon": center_lon,
+                },
+                "detected_at_timestamp": newest_detected_at,
+                "radius_m": radius_m,
+                "is_collected": all(p["is_collected"] for p in cluster_points_data),
+                "is_verified": all(p["is_verified"] for p in cluster_points_data),
+                "eco_points": eco_points,
+            }
+        )
+
+    return features
+
 @router.get("/")
 def get_all_plastic_debris(
     skip: int = 0, 
@@ -90,12 +207,11 @@ def get_all_plastic_debris(
     """
     query = db.query(
         PlasticDebris.id,
-        ST_AsText(PlasticDebris.geom).label("coordinates"),
-        PlasticDebris.size_category,
+        func.ST_X(PlasticDebris.geom).label("lon"),
+        func.ST_Y(PlasticDebris.geom).label("lat"),
         PlasticDebris.detected_at,
         PlasticDebris.is_collected,
         PlasticDebris.is_verified,
-        PlasticDebris.eco_points
     )
 
     # Filtrare Spațială
@@ -104,18 +220,25 @@ def get_all_plastic_debris(
         # ST_DWithin convertit la Geography compară în METRI
         query = query.filter(func.ST_DWithin(cast(PlasticDebris.geom, Geography), cast(point, Geography), radius_m))
 
-    results = query.offset(skip).limit(limit).all()
-    
+    results = query.all()
+    clustered = build_clustered_features(results, max_distance_m=MAX_CLUSTER_DISTANCE_M)
+    clustered = clustered[skip: skip + limit]
+
     return [
         {
-            "id": r.id,
-            "coordinates": r.coordinates,
-            "size_category": r.size_category,
-            "detected_at": r.detected_at,
-            "is_collected": r.is_collected,
-            "is_verified": r.is_verified,
-            "eco_points": r.eco_points
-        } for r in results
+            "id": c["cluster_id"],
+            "coordinates": f"POINT({c['center_lon']} {c['center_lat']})",
+            "size_category": c["size_category"],
+            "detected_at": c["detected_at_center"],
+            "detected_at_timestamp": c["detected_at_timestamp"].isoformat() if c["detected_at_timestamp"] else None,
+            "radius_m": c["radius_m"],
+            "source_point_count": c["source_point_count"],
+            "source_point_ids": c["source_point_ids"],
+            "is_collected": c["is_collected"],
+            "is_verified": c["is_verified"],
+            "eco_points": c["eco_points"],
+        }
+        for c in clustered
     ]
 
 @router.delete("/{debris_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -358,21 +481,29 @@ def export_geojson(db: Session = Depends(get_db)):
         PlasticDebris.eco_points
     ).all()
 
+    clusters = build_clustered_features(results, max_distance_m=MAX_CLUSTER_DISTANCE_M)
+
     features = []
-    for r in results:
+    for cluster in clusters:
+
         feature = {
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [r.lon, r.lat]
+                "coordinates": [cluster["center_lon"], cluster["center_lat"]]
             },
             "properties": {
-                "id": r.id,
-                "size_category": r.size_category,
-                "detected_at": r.detected_at.isoformat() if r.detected_at else None,
-                "is_collected": r.is_collected,
-                "is_verified": r.is_verified,
-                "eco_points": r.eco_points
+                "id": cluster["cluster_id"],
+                "source_point_ids": cluster["source_point_ids"],
+                "source_point_count": cluster["source_point_count"],
+                "size_category": cluster["size_category"],
+                # Requested behavior: expose geometric center via detected_at.
+                "detected_at": cluster["detected_at_center"],
+                "detected_at_timestamp": cluster["detected_at_timestamp"].isoformat() if cluster["detected_at_timestamp"] else None,
+                "radius_m": cluster["radius_m"],
+                "is_collected": cluster["is_collected"],
+                "is_verified": cluster["is_verified"],
+                "eco_points": cluster["eco_points"],
             }
         }
         features.append(feature)

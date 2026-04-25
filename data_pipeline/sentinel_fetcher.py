@@ -308,7 +308,7 @@ function evaluatePixel(sample) {
 """
 
 # Bounding box (defaults to whole world). Override with SENTINEL_BBOX.
-DEFAULT_BBOX_COORDS = [-180.0, -90.0, 180.0, 90.0]
+DEFAULT_BBOX_COORDS = [-180.0, -90.0, 180.0, 90.0] #A SE SCHIMBA IN FUNCTIE DE LOCATIA USERULUI
 BBOX_COORDS = parse_bbox_env(os.getenv("SENTINEL_BBOX", "")) or DEFAULT_BBOX_COORDS
 bbox = BBox(bbox=BBOX_COORDS, crs=CRS.WGS84)
 
