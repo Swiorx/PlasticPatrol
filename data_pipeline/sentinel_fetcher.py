@@ -1,8 +1,8 @@
 import numpy as np
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from sentinelhub import SentinelHubRequest, MimeType, CRS, BBox, SHConfig, DataCollection
+from sentinelhub import SentinelHubRequest, MimeType, CRS, BBox, SHConfig, DataCollection, MosaickingOrder
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import func
@@ -68,11 +68,15 @@ function evaluatePixel(sample) {
 BBOX_COORDS = [13.0, 37.0, 15.0, 39.0]
 bbox = BBox(bbox=BBOX_COORDS, crs=CRS.WGS84)
 
-# Date for query
-QUERY_DATE = os.getenv("QUERY_DATE", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+# Time window for query (default: last 30 days, to increase chance of available scenes)
+QUERY_END_DATE = os.getenv("QUERY_END_DATE", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+QUERY_START_DATE = os.getenv(
+    "QUERY_START_DATE",
+    (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d"),
+)
 GRID_WIDTH = int(os.getenv("GRID_WIDTH", "512"))
 GRID_HEIGHT = int(os.getenv("GRID_HEIGHT", "512"))
-MIN_COMPONENT_PIXELS = int(os.getenv("MIN_COMPONENT_PIXELS", "20"))
+MIN_COMPONENT_PIXELS = int(os.getenv("MIN_COMPONENT_PIXELS", "3"))
 MAX_RELEVANT_POINTS = int(os.getenv("MAX_RELEVANT_POINTS", "2000"))
 
 
@@ -163,7 +167,9 @@ def fetch_and_process():
             input_data=[
                 SentinelHubRequest.input_data(
                     data_collection=request_collection,
-                    time_interval=(f"{QUERY_DATE}T00:00:00Z", f"{QUERY_DATE}T23:59:59Z"),
+                    time_interval=(f"{QUERY_START_DATE}T00:00:00Z", f"{QUERY_END_DATE}T23:59:59Z"),
+                    maxcc=0.8,
+                    mosaicking_order=MosaickingOrder.MOST_RECENT,
                 )
             ],
             responses=[SentinelHubRequest.output_response("default", MimeType.TIFF)],
@@ -175,6 +181,9 @@ def fetch_and_process():
         response = request.get_data(save_data=False)
         mask = response[0].astype(np.uint8)
 
+    mask_positive_pixels = int(np.count_nonzero(mask == 1))
+    print(f"Mask positive pixels: {mask_positive_pixels}")
+
     coordinates = extract_relevant_coordinates(
         mask,
         BBOX_COORDS,
@@ -182,9 +191,11 @@ def fetch_and_process():
         max_relevant_points=MAX_RELEVANT_POINTS,
     )
 
+    print(f"Relevant centroid points: {len(coordinates)}")
+
     db = SessionLocal()
     
-    # FORCE Python to see the backend directory before importing
+    # Force Python to see the backend directory before importing
     import sys
     sys.path.insert(0, str(ROOT_DIR / "backend"))
     from app.db.models import PlasticDebris, User
