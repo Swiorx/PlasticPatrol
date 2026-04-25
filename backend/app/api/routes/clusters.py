@@ -2,6 +2,7 @@ import math
 import sys
 from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, status, UploadFile
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 from typing import List
@@ -50,13 +51,21 @@ def _reserve_cluster(
     if existing:
         raise HTTPException(status_code=409, detail="You already have an active reservation")
 
-    # Check no point in the cluster is reserved by someone else
+    # Check no point in the cluster is reserved or already collected (awaiting verification)
     conflict = db.query(PlasticDebris).filter(
         PlasticDebris.id.in_(point_ids),
-        PlasticDebris.is_reserved == True,
+        or_(
+            PlasticDebris.is_reserved == True,
+            PlasticDebris.is_collected == True,
+        ),
     ).first()
     if conflict:
-        raise HTTPException(status_code=409, detail="Already reserved by another user")
+        detail = (
+            "Debris already collected — awaiting satellite verification"
+            if conflict.is_collected
+            else "Already reserved by another user"
+        )
+        raise HTTPException(status_code=409, detail=detail)
 
     reserved_until = datetime.now(timezone.utc) + timedelta(hours=RESERVATION_HOURS)
     reservation = ClusterReservation(

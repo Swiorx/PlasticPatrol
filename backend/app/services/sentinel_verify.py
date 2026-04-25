@@ -1,10 +1,11 @@
 import math
-from datetime import timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.db.models import PlasticDebris, ClusterReservation, User, Notification
 
 NEARBY_M = 100.0
+VERIFICATION_DELAY = timedelta(days=2)
 
 
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -16,6 +17,20 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def verify_collected_debris(db: Session) -> None:
+    """
+    Satellite re-verification of collected debris.
+
+    Flow:
+      1. Wait at least 2 days after collection for the satellite to revisit.
+      2. If satellite no longer detects debris at that location → DELETE the
+         debris records entirely, award eco points, notify user.
+      3. If satellite still detects debris → revert collection, release
+         reservation, notify user that verification failed.
+      4. While awaiting verification (< 2 days), debris stays on the map
+         as 'awaiting verification' and cannot be reserved.
+    """
+    now = datetime.now(timezone.utc)
+
     pending = db.query(
         PlasticDebris,
         func.ST_X(PlasticDebris.geom).label("lon"),
@@ -34,6 +49,9 @@ def verify_collected_debris(db: Session) -> None:
         for pid in r.point_ids:
             point_to_res[pid] = r
 
+    # Collect IDs to bulk-delete after the loop
+    ids_to_delete: list[int] = []
+
     for debris, lon, lat in pending:
         if debris.collected_at is None:
             continue
@@ -41,6 +59,10 @@ def verify_collected_debris(db: Session) -> None:
         collected_at = debris.collected_at
         if collected_at.tzinfo is None:
             collected_at = collected_at.replace(tzinfo=timezone.utc)
+
+        # Wait at least 2 days for satellite to revisit the location
+        if now - collected_at < VERIFICATION_DELAY:
+            continue
 
         # Check if any new uncollected point appeared near this location after collection
         new_points = db.query(
@@ -61,6 +83,7 @@ def verify_collected_debris(db: Session) -> None:
         owning_res = point_to_res.get(debris.id)
 
         if still_there:
+            # Satellite still sees debris → revert collection
             if owning_res:
                 owning_res.status = "failed"
                 db.query(PlasticDebris).filter(PlasticDebris.id.in_(owning_res.point_ids)).update(
@@ -77,7 +100,7 @@ def verify_collected_debris(db: Session) -> None:
                 debris.collected_by = None
                 debris.collected_at = None
         else:
-            debris.is_verified = True
+            # Satellite confirms clean → award points, then DELETE debris
             if owning_res:
                 owning_res.status = "collected"
                 user = db.query(User).filter(User.id == owning_res.reserved_by).first()
@@ -85,7 +108,24 @@ def verify_collected_debris(db: Session) -> None:
                     user.eco_points += owning_res.eco_points
                     db.add(Notification(
                         user_id=user.id,
-                        message=f"Satellite confirmed your collection! You earned {owning_res.eco_points} eco points.",
+                        message=f"🛰️ Satellite confirmed cleanup! You earned {owning_res.eco_points} eco points. Debris removed from map.",
                     ))
+                ids_to_delete.extend(owning_res.point_ids)
+            else:
+                # Non-cluster single-debris collection
+                if debris.collected_by:
+                    user = db.query(User).filter(User.id == debris.collected_by).first()
+                    if user:
+                        eco = debris.eco_points or 2
+                        user.eco_points += eco
+                        db.add(Notification(
+                            user_id=user.id,
+                            message=f"🛰️ Satellite confirmed cleanup! You earned {eco} eco points. Debris removed from map.",
+                        ))
+                ids_to_delete.append(debris.id)
+
+    # Bulk-delete all confirmed-clean debris
+    if ids_to_delete:
+        db.query(PlasticDebris).filter(PlasticDebris.id.in_(ids_to_delete)).delete(synchronize_session="fetch")
 
     db.commit()

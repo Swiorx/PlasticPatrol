@@ -8,7 +8,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import cast, func
+from sqlalchemy import and_, cast, func, or_
 from sqlalchemy.orm import Session
 from geoalchemy2.elements import WKTElement
 from geoalchemy2.types import Geography
@@ -169,7 +169,13 @@ def get_my_debris(
                 cast(user_point, Geography),
                 radius_m,
             ),
-            PlasticDebris.is_collected == False,
+            or_(
+                PlasticDebris.is_collected == False,
+                and_(
+                    PlasticDebris.is_collected == True,
+                    PlasticDebris.is_verified == False,
+                ),
+            ),
         )
         .all()
     )
