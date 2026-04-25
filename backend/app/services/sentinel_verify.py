@@ -25,6 +25,15 @@ def verify_collected_debris(db: Session) -> None:
         PlasticDebris.is_verified == False,
     ).all()
 
+    photo_verified_reservations = db.query(ClusterReservation).filter(
+        ClusterReservation.status == "photo_verified"
+    ).all()
+    # Build lookup: debris_point_id → reservation
+    point_to_res: dict = {}
+    for r in photo_verified_reservations:
+        for pid in r.point_ids:
+            point_to_res[pid] = r
+
     for debris, lon, lat in pending:
         if debris.collected_at is None:
             continue
@@ -49,12 +58,7 @@ def verify_collected_debris(db: Session) -> None:
             for _, lon2, lat2 in new_points
         )
 
-        owning_res = next(
-            (r for r in db.query(ClusterReservation).filter(
-                ClusterReservation.status == "photo_verified"
-            ).all() if debris.id in r.point_ids),
-            None,
-        )
+        owning_res = point_to_res.get(debris.id)
 
         if still_there:
             if owning_res:

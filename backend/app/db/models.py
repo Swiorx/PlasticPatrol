@@ -29,7 +29,7 @@ class PlasticDebris(Base):
     detected_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_collected = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=False)
-    is_reserved = Column(Boolean, default=False)
+    is_reserved = Column(Boolean, default=False, nullable=False)
     collected_by = Column(Integer, default=None)
     collected_at = Column(DateTime, default=None)
     eco_points = Column(Integer, default=0)

@@ -112,9 +112,10 @@ def release_reservation(
     reservation = db.query(ClusterReservation).filter(
         ClusterReservation.id == reservation_id,
         ClusterReservation.reserved_by == current_user.id,
+        ClusterReservation.status == "reserved",
     ).first()
     if not reservation:
-        raise HTTPException(status_code=404, detail="Reservation not found")
+        raise HTTPException(status_code=404, detail="Reservation not found or already collected")
 
     reservation.status = "expired"
     db.query(PlasticDebris).filter(PlasticDebris.id.in_(reservation.point_ids)).update(
