@@ -3,29 +3,20 @@
   <div id="map-container"></div>
   <div class="info-overlay">
     <h2>Current Location</h2>
-
-    @if (errorMsg()) {
-    <div class="error">{{ errorMsg() }}</div>
-    } @else if (latitude() != null && longitude() != null) {
-    <p>Lat: {{ latitude() | number:'1.4-4' }}</p>
-    <p>Lng: {{ longitude() | number:'1.4-4' }}</p>
-    <p>Debris nearby (12 km): {{ debrisCount() }}</p>
-
-    <button type="button" (click)="refreshSatellite()" [disabled]="refreshing()">
-      {{ refreshing() ? 'Scanning...' : 'Refresh satellite scan' }}
+    @if (errorMsg) {
+    <div class="error">{{ errorMsg }}</div>
+    } @else if (latitude !== null && longitude !== null) {
+    <p>Lat: {{ latitude | number:'1.4-4' }}</p>
+    <p>Lng: {{ longitude | number:'1.4-4' }}</p>
+    <p>Debris nearby (12 km): {{ debrisCount }}</p>
+    <button type="button" (click)="refreshSatellite()" [disabled]="refreshing">
+      {{ refreshing ? 'Scanning...' : 'Refresh satellite scan' }}
     </button>
-
-    @if (statusMsg()) {
-    <p class="status">{{ statusMsg() }}</p>
+    @if (statusMsg) {
+    <p class="status">{{ statusMsg }}</p>
     }
     } @else {
     <p>Locating...</p>
     }
   </div>
-
-  @if (showCollectOverlay() && activeReservationId() !== null) {
-  <app-collect-overlay [reservationId]="activeReservationId()!" [ecoPoints]="activeClusterEcoPoints()"
-    (closed)="onOverlayClosed()" (collected)="onOverlayCollected()">
-  </app-collect-overlay>
-  }
 </div>
