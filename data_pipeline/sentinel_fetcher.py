@@ -5,6 +5,7 @@ from pathlib import Path
 from sentinelhub import SentinelHubRequest, MimeType, CRS, BBox, SHConfig, DataCollection
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import func
 from geoalchemy2.elements import WKTElement
 
 
@@ -186,24 +187,73 @@ def fetch_and_process():
     # FORCE Python to see the backend directory before importing
     import sys
     sys.path.insert(0, str(ROOT_DIR / "backend"))
-    from app.db.models import PlasticDebris
+    from app.db.models import PlasticDebris, User
 
+    # 1. VERIFICARE PUNCTE COLECTATE (care așteaptă confirmarea satelitului)
+    pending_debris = db.query(PlasticDebris).filter(
+        PlasticDebris.is_collected == True,
+        PlasticDebris.is_verified == False,
+        PlasticDebris.size_category != "beach" # Doar cele din ocean au nevoie de satelit
+    ).all()
+
+    verified_count = 0
+    min_lon, min_lat, max_lon, max_lat = BBOX_COORDS
+    height, width = mask.shape
+
+    for debris in pending_debris:
+        # Preluăm lon și lat din geom (format: POINT(lon lat))
+        # O metodă rapidă e extragerea din string-ul WKT direct (sau din baza de date)
+        # Pentru simplitate, interogăm funcțiile PostGIS pentru a ne da lon/lat
+        lon_lat = db.execute(func.ST_AsText(debris.geom)).scalar()
+        # lon_lat arată așa: 'POINT(13.5 38.2)'
+        lon_str, lat_str = lon_lat.replace("POINT(", "").replace(")", "").split(" ")
+        lon, lat = float(lon_str), float(lat_str)
+
+        # Verificăm dacă punctul se află în BBOX-ul curent al satelitului
+        if min_lon <= lon <= max_lon and min_lat <= lat <= max_lat:
+            lon_fraction = (lon - min_lon) / (max_lon - min_lon)
+            lat_fraction = (lat - min_lat) / (max_lat - min_lat)
+            col = min(width - 1, max(0, int(round(lon_fraction * width))))
+            row = min(height - 1, max(0, int(round((1.0 - lat_fraction) * height))))
+
+            # Dacă satelitul vede APĂ CURATĂ (0) unde înainte era gunoi, confirmăm curățarea!
+            if mask[row, col] == 0:
+                debris.is_verified = True
+                user = db.query(User).filter(User.id == debris.collected_by).first()
+                if user:
+                    user.eco_points += debris.eco_points
+                verified_count += 1
+
+    # 2. INSERARE PUNCTE NOI DETECTATE (Fără a crea duplicate)
+    inserted_count = 0
     for lon, lat in coordinates:
         point = WKTElement(f"SRID=4326;POINT({lon} {lat})")
-        debris = PlasticDebris(
-            geom=point,
-            size_category="small",
-            detected_at=datetime.now(timezone.utc),
-            is_collected=False,
-            eco_points=5,
-        )
-        db.add(debris)
+        
+        # Verificăm dacă există deja un deșeu NECOLECTAT foarte aproape (raza 100m)
+        from geoalchemy2.types import Geography
+        from sqlalchemy import cast
+        
+        existing = db.query(PlasticDebris).filter(
+            PlasticDebris.is_collected == False,
+            func.ST_DWithin(cast(PlasticDebris.geom, Geography), cast(point, Geography), 100)
+        ).first()
+
+        if not existing:
+            new_debris = PlasticDebris(
+                geom=point,
+                size_category="small",
+                detected_at=datetime.now(timezone.utc),
+                is_collected=False,
+                is_verified=False,
+                eco_points=5,
+            )
+            db.add(new_debris)
+            inserted_count += 1
 
     db.commit()
     db.close()
 
-    print(f"Inserted {len(coordinates)} debris points into database")
-
+    print(f"Satellite sync complete: {inserted_count} new debris inserted, {verified_count} debris cleanups verified.")
 
 if __name__ == "__main__":
     fetch_and_process()
