@@ -18,4 +18,13 @@
       <p>Locating...</p>
     }
   </div>
+
+  @if (showCollectOverlay && activeReservationId !== null) {
+    <app-collect-overlay
+      [reservationId]="activeReservationId"
+      [ecoPoints]="activeClusterEcoPoints"
+      (closed)="onOverlayClosed()"
+      (collected)="onOverlayCollected()">
+    </app-collect-overlay>
+  }
 </div>

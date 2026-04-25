@@ -1,0 +1,50 @@
+<div style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;display:flex;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:16px;padding:32px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+
+    @if (state === 'loading') {
+      <p style="font-size:1.1rem;color:#6b7280">Analyzing photo...</p>
+      <div style="margin:16px auto;width:40px;height:40px;border:4px solid #e5e7eb;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    }
+
+    @if (state === 'success') {
+      <div style="font-size:2rem">&#x2705;</div>
+      <p style="color:#10b981;font-weight:600">{{ message }}</p>
+    }
+
+    @if (state === 'released') {
+      <div style="font-size:2rem">&#x274C;</div>
+      <p style="color:#ef4444">{{ message }}</p>
+    }
+
+    @if (state === 'idle' || state === 'fail') {
+      <h3 style="margin:0 0 8px 0;color:#111827">Photograph the debris</h3>
+      <p style="color:#6b7280;font-size:0.9rem;margin:0 0 20px 0">Take or upload a clear photo showing the debris. Up to {{ 3 }} attempts.</p>
+
+      @if (state === 'fail') {
+        <p style="color:#ef4444;font-size:0.9rem;margin-bottom:16px">{{ message }}</p>
+      }
+
+      @if (previewUrl) {
+        <img [src]="previewUrl" alt="Preview" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-bottom:16px">
+      }
+
+      <input type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event)"
+        style="display:block;width:100%;margin-bottom:16px;font-size:0.9rem">
+
+      <button (click)="submit()" [disabled]="!selectedFile || isLoading"
+        style="width:100%;padding:12px;background:#10b981;color:white;border:none;border-radius:8px;font-size:1rem;cursor:pointer;margin-bottom:10px"
+        [style.opacity]="selectedFile ? '1' : '0.5'">
+        Submit Photo
+      </button>
+
+      <button (click)="cancel()"
+        style="width:100%;padding:10px;background:transparent;color:#6b7280;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;cursor:pointer">
+        Cancel reservation
+      </button>
+    }
+  </div>
+</div>
+
+<style>
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>

@@ -2,15 +2,17 @@ import { Component, OnInit, OnDestroy, PLATFORM_ID, Inject, ChangeDetectorRef } 
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService, DebrisOut } from '../../services/api.service';
+import { CollectOverlayComponent } from '../collect-overlay/collect-overlay';
 
 const RADIUS_KM = 12;
 const POST_LOCATION_MIN_INTERVAL_MS = 30_000;
 const POST_LOCATION_MIN_DISTANCE_M = 50;
+const COLLECT_RADIUS_M = 100;
 
 @Component({
   selector: 'app-map',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CollectOverlayComponent],
   templateUrl: './map.html',
   styleUrl: './map.scss'
 })
@@ -22,11 +24,16 @@ export class Map implements OnInit, OnDestroy {
   refreshing = false;
   debrisCount = 0;
 
+  showCollectOverlay = false;
+  activeReservationId: number | null = null;
+  activeClusterEcoPoints = 0;
+
   private map: any;
-  private marker: any;
+  private userMarker: any;
   private debrisLayer: any;
   private L: any;
   private watchId: number | null = null;
+  private debris: DebrisOut[] = [];
 
   private lastPostedAt = 0;
   private lastPostedLat: number | null = null;
@@ -54,11 +61,8 @@ export class Map implements OnInit, OnDestroy {
 
     if ('geolocation' in navigator) {
       this.watchId = navigator.geolocation.watchPosition(
-        (position) => this.onPosition(position),
-        (error) => {
-          this.errorMsg = `Geolocation error: ${error.message}`;
-          this.cdr.detectChanges();
-        },
+        (pos) => this.onPosition(pos),
+        (err) => { this.errorMsg = `Geolocation error: ${err.message}`; this.cdr.detectChanges(); },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
@@ -70,27 +74,22 @@ export class Map implements OnInit, OnDestroy {
   private onPosition(position: GeolocationPosition) {
     const lat = position.coords.latitude;
     const lon = position.coords.longitude;
-
     this.latitude = lat;
     this.longitude = lon;
     this.errorMsg = null;
 
-    const latlng: [number, number] = [lat, lon];
-    this.map.setView(latlng, 13);
+    this.map.setView([lat, lon], 13);
 
-    if (!this.marker) {
+    if (!this.userMarker) {
       const icon = this.L.icon({
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
+        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
       });
-      this.marker = this.L.marker(latlng, { icon }).addTo(this.map);
+      this.userMarker = this.L.marker([lat, lon], { icon }).addTo(this.map);
     } else {
-      this.marker.setLatLng(latlng);
+      this.userMarker.setLatLng([lat, lon]);
     }
 
     this.maybePostLocation(lat, lon);
@@ -98,6 +97,8 @@ export class Map implements OnInit, OnDestroy {
     if (!this.debrisLoaded) {
       this.debrisLoaded = true;
       this.loadDebris();
+    } else {
+      this.renderDebris(this.debris);
     }
 
     this.cdr.detectChanges();
@@ -106,26 +107,20 @@ export class Map implements OnInit, OnDestroy {
   private maybePostLocation(lat: number, lon: number) {
     const now = Date.now();
     const movedFar =
-      this.lastPostedLat === null ||
-      this.lastPostedLon === null ||
+      this.lastPostedLat === null || this.lastPostedLon === null ||
       this.haversineMeters(this.lastPostedLat, this.lastPostedLon, lat, lon) > POST_LOCATION_MIN_DISTANCE_M;
 
     if (now - this.lastPostedAt < POST_LOCATION_MIN_INTERVAL_MS && !movedFar) return;
-
     this.lastPostedAt = now;
     this.lastPostedLat = lat;
     this.lastPostedLon = lon;
 
-    this.api.postLocation(lat, lon).subscribe({
-      error: (err: HttpErrorResponse) => {
-        console.warn('postLocation failed', err);
-      }
-    });
+    this.api.postLocation(lat, lon).subscribe({ error: (err: HttpErrorResponse) => console.warn('postLocation failed', err) });
   }
 
   loadDebris() {
     this.api.getDebris(RADIUS_KM).subscribe({
-      next: (items) => this.renderDebris(items),
+      next: (items) => { this.debris = items; this.renderDebris(items); },
       error: (err: HttpErrorResponse) => {
         if (err.status !== 401) {
           this.statusMsg = err.error?.detail || 'Could not load debris';
@@ -158,21 +153,88 @@ export class Map implements OnInit, OnDestroy {
 
   private renderDebris(items: DebrisOut[]) {
     this.debrisLayer.clearLayers();
-    const debrisIcon = this.L.divIcon({
-      className: 'debris-dot',
-      iconSize: [12, 12],
-      iconAnchor: [6, 6],
-    });
+
     for (const d of items) {
-      this.L.marker([d.latitude, d.longitude], { icon: debrisIcon })
-        .bindPopup(
-          `Debris #${d.id}<br>${d.size_category}<br>` +
-          (d.is_collected ? 'Collected' : 'Not collected') +
-          (d.is_verified ? ' (verified)' : '')
-        )
+      const color = d.is_reserved
+        ? '#f59e0b'
+        : d.size_category === 'large' ? '#ef4444'
+        : d.size_category === 'medium' ? '#f97316'
+        : '#3b82f6';
+
+      const icon = this.L.divIcon({
+        className: '',
+        html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+
+      const nearEnough = this.latitude !== null && this.longitude !== null &&
+        this.haversineMeters(this.latitude, this.longitude, d.latitude, d.longitude) <= COLLECT_RADIUS_M;
+
+      let popupHtml = `<b>${d.size_category} cluster</b><br>${d.source_point_count} point(s)<br>&#x1F33F; ${d.eco_points} eco points`;
+
+      if (d.is_reserved && d.reservation_id !== null) {
+        const disabled = nearEnough ? '' : 'disabled';
+        const title = nearEnough ? '' : 'title="Get within 100m to collect"';
+        popupHtml += `<br><br><button ${disabled} ${title}
+          onclick="window._collectCluster(${d.reservation_id}, ${d.eco_points})"
+          style="padding:4px 10px;background:#10b981;color:white;border:none;border-radius:4px;cursor:${nearEnough ? 'pointer' : 'not-allowed'};opacity:${nearEnough ? '1' : '0.5'}">
+          Collect
+        </button>`;
+      } else {
+        popupHtml += `<br><br><button
+          onclick="window._reserveCluster(${JSON.stringify(d.source_point_ids)}, ${d.latitude}, ${d.longitude}, ${d.eco_points})"
+          style="padding:4px 10px;background:#3b82f6;color:white;border:none;border-radius:4px;cursor:pointer">
+          Reserve
+        </button>`;
+      }
+
+      this.L.marker([d.latitude, d.longitude], { icon })
+        .bindPopup(popupHtml)
         .addTo(this.debrisLayer);
     }
+
+    (window as any)._reserveCluster = (pointIds: number[], lat: number, lon: number, eco: number) => {
+      this.onReserve(pointIds, lat, lon, eco);
+    };
+    (window as any)._collectCluster = (reservationId: number, eco: number) => {
+      this.onCollect(reservationId, eco);
+    };
+
     this.debrisCount = items.length;
+    this.cdr.detectChanges();
+  }
+
+  onReserve(pointIds: number[], centerLat: number, centerLon: number, ecoPoints: number) {
+    this.api.reserveCluster(pointIds, centerLat, centerLon, ecoPoints).subscribe({
+      next: () => {
+        this.statusMsg = 'Reserved! You have 24h to collect.';
+        this.loadDebris();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.statusMsg = err.error?.detail || 'Could not reserve';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  onCollect(reservationId: number, ecoPoints: number) {
+    this.activeReservationId = reservationId;
+    this.activeClusterEcoPoints = ecoPoints;
+    this.showCollectOverlay = true;
+    this.cdr.detectChanges();
+  }
+
+  onOverlayClosed() {
+    this.showCollectOverlay = false;
+    this.activeReservationId = null;
+    this.cdr.detectChanges();
+  }
+
+  onOverlayCollected() {
+    this.showCollectOverlay = false;
+    this.activeReservationId = null;
+    this.loadDebris();
     this.cdr.detectChanges();
   }
 
@@ -181,19 +243,16 @@ export class Map implements OnInit, OnDestroy {
     const toRad = (d: number) => d * Math.PI / 180;
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
-    const a = Math.sin(dLat / 2) ** 2 +
-              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(a));
   }
 
   ngOnDestroy() {
     if (isPlatformBrowser(this.platformId)) {
-      if (this.watchId !== null) {
-        navigator.geolocation.clearWatch(this.watchId);
-      }
-      if (this.map) {
-        this.map.remove();
-      }
+      if (this.watchId !== null) navigator.geolocation.clearWatch(this.watchId);
+      if (this.map) this.map.remove();
+      delete (window as any)._reserveCluster;
+      delete (window as any)._collectCluster;
     }
   }
 }
