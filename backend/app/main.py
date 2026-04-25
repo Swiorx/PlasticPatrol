@@ -10,9 +10,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime, timezone
 from geoalchemy2.elements import WKTElement
-from app.db.session import engine, get_db
+from app.db.session import engine, get_db, SessionLocal
 from app.db import models
 from app.db.models import User, PlasticDebris, Notification
+from app.db.migrations import run_startup_migrations
 from app.core.security import get_password_hash
 from app.api.routes import users, plastic
 from app.api.routes.classifier import router as classifier_router
@@ -21,6 +22,9 @@ from app.api.routes.notifications import router as notifications_router
 
 # Creăm tabelele în baza de date pe baza modelelor definite anterior
 models.Base.metadata.create_all(bind=engine)
+
+with SessionLocal() as _db:
+    run_startup_migrations(_db)
 
 tags_metadata = [
     {"name": "root", "description": "Endpoint principal"},
