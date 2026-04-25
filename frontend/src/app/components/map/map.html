@@ -1,15 +1,14 @@
 <div class="map-wrapper">
-    <div class="info-overlay">
-        <h2>Your current location is:</h2>
-        @if (lat !== undefined && lng !== undefined) {
-            <p>Lat: {{lat | number:'1.4-6'}}</p>
-            <p>Lng: {{lng | number:'1.4-6'}}</p>
-        } @else {
-            <p>Searching...</p>
-        }
-        @if (errorMsg) {
-            <p class="error">{{errorMsg}}</p>
-        }
-    </div>
-    <div id="map-container"></div>
+  <div id="map-container"></div>
+  <div class="info-overlay">
+    <h2>Current Location</h2>
+    @if (errorMsg) {
+      <div class="error">{{ errorMsg }}</div>
+    } @else if (latitude !== null && longitude !== null) {
+      <p>Lat: {{ latitude | number:'1.4-4' }}</p>
+      <p>Lng: {{ longitude | number:'1.4-4' }}</p>
+    } @else {
+      <p>Locating...</p>
+    }
+  </div>
 </div>
