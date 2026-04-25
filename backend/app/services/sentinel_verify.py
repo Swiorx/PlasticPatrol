@@ -57,16 +57,21 @@ def verify_collected_debris(db: Session) -> None:
         )
 
         if still_there:
-            debris.is_collected = False
-            debris.is_reserved = False
-            debris.collected_by = None
-            debris.collected_at = None
             if owning_res:
                 owning_res.status = "failed"
+                db.query(PlasticDebris).filter(PlasticDebris.id.in_(owning_res.point_ids)).update(
+                    {"is_collected": False, "is_reserved": False, "collected_by": None, "collected_at": None},
+                    synchronize_session="fetch",
+                )
                 db.add(Notification(
                     user_id=owning_res.reserved_by,
                     message="Satellite scan shows debris still present — collection could not be confirmed. No eco points awarded.",
                 ))
+            else:
+                debris.is_collected = False
+                debris.is_reserved = False
+                debris.collected_by = None
+                debris.collected_at = None
         else:
             debris.is_verified = True
             if owning_res:
