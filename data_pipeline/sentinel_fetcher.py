@@ -49,23 +49,64 @@ function setup() {
 }
 
 function evaluatePixel(sample) {
-  // 1. Is it water? NDWI > 0.0 (Loosened from 0.15)
+    // 1. Keep likely water pixels, but not overly restrictive
   let ndwiNumerator = sample.B03 - sample.B08;
   let ndwiDenominator = sample.B03 + sample.B08;
   let ndwi = (ndwiDenominator !== 0) ? ndwiNumerator / ndwiDenominator : 0;
 
-  // 2. Is there an anomaly reflecting NIR? (Simple threshold)
-  // Water absorbs NIR. If B08 is suspiciously high over water, flag it.
-  
-  if (ndwi > 0.0 && sample.B08 > 0.04) {
+    // 2. Keep anomaly checks strict-but-not-zero
+    let ndviNumerator = sample.B08 - sample.B04;
+    let ndviDenominator = sample.B08 + sample.B04;
+    let ndvi = (ndviDenominator !== 0) ? ndviNumerator / ndviDenominator : 0;
+
+    let redGreenRatio = sample.B04 / (sample.B03 + 1.0);
+
+    if (
+        ndwi > 0.02 &&
+        sample.B08 > 0.03 &&
+        ndvi > -0.20 && ndvi < 0.35 &&
+        redGreenRatio > 0.80 && redGreenRatio < 1.60
+    ) {
     return [1];
   }
   return [0];
 }
 """
 
-# Bounding box over Mediterranean Sea (coastal region)
-BBOX_COORDS = [13.0, 37.0, 15.0, 39.0]
+RELAXED_EVALSCRIPT = """
+//VERSION=3
+function setup() {
+    return {
+        input: ["B02", "B03", "B04", "B08"],
+        output: { bands: 1, sampleType: "UINT8" }
+    };
+}
+
+function evaluatePixel(sample) {
+    let ndwiNumerator = sample.B03 - sample.B08;
+    let ndwiDenominator = sample.B03 + sample.B08;
+    let ndwi = (ndwiDenominator !== 0) ? ndwiNumerator / ndwiDenominator : 0;
+
+    let ndviNumerator = sample.B08 - sample.B04;
+    let ndviDenominator = sample.B08 + sample.B04;
+    let ndvi = (ndviDenominator !== 0) ? ndviNumerator / ndviDenominator : 0;
+
+    let redGreenRatio = sample.B04 / (sample.B03 + 1.0);
+
+    if (
+        ndwi > -0.05 &&
+        sample.B08 > 0.015 &&
+        ndvi > -0.35 && ndvi < 0.45 &&
+        redGreenRatio > 0.60 && redGreenRatio < 2.20
+    ) {
+        return [1];
+    }
+    return [0];
+}
+"""
+
+# Bounding box near Lagos coast / Gulf of Guinea (high coastal debris likelihood)
+BBOX_COORDS = [3.00, 6.20, 4.20, 6.90]
 bbox = BBox(bbox=BBOX_COORDS, crs=CRS.WGS84)
 
 # Time window for query (default: last 30 days, to increase chance of available scenes)
@@ -135,7 +176,8 @@ def extract_relevant_coordinates(mask, bbox_coords, min_component_pixels, max_re
         lon_fraction = col / width
         lon = min_lon + lon_fraction * (max_lon - min_lon)
         lat = min_lat + lat_fraction * (max_lat - min_lat)
-        coordinates.append((lon, lat))
+        # Return tuples as (lat, lon) as requested.
+        coordinates.append((lat, lon))
 
     return coordinates
 
@@ -162,6 +204,36 @@ def fetch_and_process():
             if "dataspace.copernicus.eu" in SH_BASE_URL:
                 sh_config.sh_token_url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
 
+        def build_request(evalscript):
+            return SentinelHubRequest(
+                evalscript=evalscript,
+                input_data=[
+                    SentinelHubRequest.input_data(
+                        data_collection=request_collection,
+                        time_interval=(f"{QUERY_START_DATE}T00:00:00Z", f"{QUERY_END_DATE}T23:59:59Z"),
+                        maxcc=0.8,
+                        mosaicking_order=MosaickingOrder.MOST_RECENT,
+                    )
+                ],
+                responses=[SentinelHubRequest.output_response("default", MimeType.TIFF)],
+                bbox=bbox,
+                size=[GRID_WIDTH, GRID_HEIGHT],
+                config=sh_config,
+            )
+
+        request = build_request(EVALSCRIPT)
+        response = request.get_data(save_data=False)
+        mask = response[0].astype(np.uint8)
+
+        strict_positive_pixels = int(np.count_nonzero(mask == 1))
+        if strict_positive_pixels == 0:
+            print("Strict evalscript yielded 0 pixels, retrying with relaxed fallback...")
+            request = build_request(RELAXED_EVALSCRIPT)
+            response = request.get_data(save_data=False)
+            mask = response[0].astype(np.uint8)
+
+        # Keep the original request body for reference below (removed duplication)
+        """
         request = SentinelHubRequest(
             evalscript=EVALSCRIPT,
             input_data=[
@@ -177,9 +249,7 @@ def fetch_and_process():
             size=[GRID_WIDTH, GRID_HEIGHT],
             config=sh_config,
         )
-
-        response = request.get_data(save_data=False)
-        mask = response[0].astype(np.uint8)
+        """
 
     mask_positive_pixels = int(np.count_nonzero(mask == 1))
     print(f"Mask positive pixels: {mask_positive_pixels}")
@@ -237,7 +307,7 @@ def fetch_and_process():
 
     # 2. INSERARE PUNCTE NOI DETECTATE (Fără a crea duplicate)
     inserted_count = 0
-    for lon, lat in coordinates:
+    for lat, lon in coordinates:
         point = WKTElement(f"SRID=4326;POINT({lon} {lat})")
         
         # Verificăm dacă există deja un deșeu NECOLECTAT foarte aproape (raza 100m)
