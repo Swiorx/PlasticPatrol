@@ -100,10 +100,19 @@ MAX_RELEVANT_POINTS = int(os.getenv("MAX_RELEVANT_POINTS", "2000"))
 def get_mock_mask(height=512, width=512):
     mask = np.zeros((height, width), dtype=np.uint8)
     mask[100:110, 200:210] = 1
-    mask[256, 256] = 1
-    mask[400:405, 450:455] = 1
+    # Only set center pixel if dimensions are large enough
+    if height > 256 and width > 256:
+        mask[256, 256] = 1
+    else:
+        # For smaller masks, set the approximate center
+        center_row = min(height - 1, height // 2)
+        center_col = min(width - 1, width // 2)
+        mask[center_row, center_col] = 1
+    # Only add third region if dimensions are large enough
+    if height > 405 and width > 455:
+        mask[400:405, 450:455] = 1
     np.random.seed(42)
-    random_indices = np.random.choice(height * width, 50, replace=False)
+    random_indices = np.random.choice(height * width, min(50, height * width), replace=False)
     mask.flat[random_indices] = 1
     return mask
 
@@ -202,11 +211,6 @@ def fetch_and_process():
         mask = response[0].astype(np.uint8)
 
         strict_positive_pixels = int(np.count_nonzero(mask == 1))
-        if strict_positive_pixels == 0:
-            print("Strict evalscript yielded 0 pixels, retrying with relaxed fallback...")
-            request = build_request(RELAXED_EVALSCRIPT)
-            response = request.get_data(save_data=False)
-            mask = response[0].astype(np.uint8)
 
     mask_positive_pixels = int(np.count_nonzero(mask == 1))
     print(f"Mask positive pixels: {mask_positive_pixels}")
