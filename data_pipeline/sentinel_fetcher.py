@@ -200,8 +200,16 @@ def fetch_and_process():
     sys.path.insert(0, str(ROOT_DIR / "backend"))
     from app.db.models import PlasticDebris, User
 
+    from geoalchemy2.types import Geography
+    from sqlalchemy import cast
+
     # 1. VERIFICARE PUNCTE COLECTATE (care așteaptă confirmarea satelitului)
-    pending_debris = db.query(PlasticDebris).filter(
+    # Extragem direct lon și lat folosind funcțiile spațiale din baza de date
+    pending_debris = db.query(
+        PlasticDebris,
+        func.ST_X(PlasticDebris.geom).label("lon"),
+        func.ST_Y(PlasticDebris.geom).label("lat")
+    ).filter(
         PlasticDebris.is_collected == True,
         PlasticDebris.is_verified == False,
         PlasticDebris.size_category != "beach" # Doar cele din ocean au nevoie de satelit
@@ -211,15 +219,7 @@ def fetch_and_process():
     min_lon, min_lat, max_lon, max_lat = BBOX_COORDS
     height, width = mask.shape
 
-    for debris in pending_debris:
-        # Preluăm lon și lat din geom (format: POINT(lon lat))
-        # O metodă rapidă e extragerea din string-ul WKT direct (sau din baza de date)
-        # Pentru simplitate, interogăm funcțiile PostGIS pentru a ne da lon/lat
-        lon_lat = db.execute(func.ST_AsText(debris.geom)).scalar()
-        # lon_lat arată așa: 'POINT(13.5 38.2)'
-        lon_str, lat_str = lon_lat.replace("POINT(", "").replace(")", "").split(" ")
-        lon, lat = float(lon_str), float(lat_str)
-
+    for debris, lon, lat in pending_debris:
         # Verificăm dacă punctul se află în BBOX-ul curent al satelitului
         if min_lon <= lon <= max_lon and min_lat <= lat <= max_lat:
             lon_fraction = (lon - min_lon) / (max_lon - min_lon)
@@ -241,9 +241,6 @@ def fetch_and_process():
         point = WKTElement(f"SRID=4326;POINT({lon} {lat})")
         
         # Verificăm dacă există deja un deșeu NECOLECTAT foarte aproape (raza 100m)
-        from geoalchemy2.types import Geography
-        from sqlalchemy import cast
-        
         existing = db.query(PlasticDebris).filter(
             PlasticDebris.is_collected == False,
             func.ST_DWithin(cast(PlasticDebris.geom, Geography), cast(point, Geography), 100)
