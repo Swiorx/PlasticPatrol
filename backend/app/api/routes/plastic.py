@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast
 from geoalchemy2.functions import ST_AsText
@@ -6,6 +6,8 @@ from geoalchemy2.types import Geography
 from geoalchemy2.elements import WKTElement
 from typing import Optional
 from datetime import datetime, timezone
+import subprocess
+import sys
 
 from app.db.session import get_db
 from app.db.models import PlasticDebris, User
@@ -120,7 +122,7 @@ def collect_plastic_debris(
     if debris.is_collected and debris.is_verified:
         raise HTTPException(status_code=400, detail="Acest deșeu a fost deja colectat și validat.")
 
-    # 1. Reguli pentru Plajă
+    # 1. Reguli pentru Plajă → DOAR personal autorizat
     if debris.size_category == "beach":
         if not current_user.is_authorized:
             raise HTTPException(
@@ -133,12 +135,12 @@ def collect_plastic_debris(
         debris.collected_by = current_user.id
         debris.collected_at = datetime.now(timezone.utc)
         
-        # Acordăm punctele instant
+        # Acordăm punctele instant (personal autorizat = încredere imediată)
         current_user.eco_points += debris.eco_points
         db.commit()
         return {"message": f"Colectare reușită (personal autorizat)! Ai primit {debris.eco_points} puncte."}
     
-    # 2. Reguli pentru Ocean
+    # 2. Reguli pentru Ocean → ORICINE poate colecta
     else:
         debris.is_collected = True
         debris.collected_by = current_user.id
@@ -163,23 +165,28 @@ def delete_all_plastic_debris(
     db.commit()
     return None
 
-from fastapi import BackgroundTasks
-
 @router.post("/scan/start", status_code=status.HTTP_202_ACCEPTED)
 def trigger_satellite_scan(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user)
 ):
     """
-    [BUTON ADMIN] Pornește scanarea din satelit (sentinel_fetcher.py) la comandă.
-    Scanarea se va rula în fundal (Background Task) deoarece poate dura câteva minute 
-    să descarce pozele și să le proceseze, iar noi nu vrem să blocăm serverul!
+    [BUTON ADMIN] Pornește scanarea din satelit (sentinel_fetcher.py) ca sub-proces.
+    Scriptul rulează în fundal, independent de serverul FastAPI.
     """
-    from data_pipeline.sentinel_fetcher import fetch_and_process
-    
-    # Adaugă execuția în coada de fundal a FastAPI-ului
-    background_tasks.add_task(fetch_and_process)
-    
+    from pathlib import Path
+    project_root = Path(__file__).resolve().parents[3]
+    script_path = project_root / "data_pipeline" / "sentinel_fetcher.py"
+
+    def run_scan():
+        subprocess.Popen(
+            [sys.executable, str(script_path)],
+            cwd=str(project_root),
+            env={**__import__('os').environ}
+        )
+
+    background_tasks.add_task(run_scan)
+
     return {
         "message": "Comanda a fost trimisă cu succes către satelit! "
                    "Scanarea rulează acum în fundal. Dă un refresh la lista de plastic "

@@ -232,25 +232,6 @@ def fetch_and_process():
             response = request.get_data(save_data=False)
             mask = response[0].astype(np.uint8)
 
-        # Keep the original request body for reference below (removed duplication)
-        """
-        request = SentinelHubRequest(
-            evalscript=EVALSCRIPT,
-            input_data=[
-                SentinelHubRequest.input_data(
-                    data_collection=request_collection,
-                    time_interval=(f"{QUERY_START_DATE}T00:00:00Z", f"{QUERY_END_DATE}T23:59:59Z"),
-                    maxcc=0.8,
-                    mosaicking_order=MosaickingOrder.MOST_RECENT,
-                )
-            ],
-            responses=[SentinelHubRequest.output_response("default", MimeType.TIFF)],
-            bbox=bbox,
-            size=[GRID_WIDTH, GRID_HEIGHT],
-            config=sh_config,
-        )
-        """
-
     mask_positive_pixels = int(np.count_nonzero(mask == 1))
     print(f"Mask positive pixels: {mask_positive_pixels}")
 
