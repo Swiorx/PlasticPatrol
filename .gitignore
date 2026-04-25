@@ -17,6 +17,7 @@ Thumbs.db
 *.log
 .vscode/settings.json
 .gitignore
+.env
 backend/.env
 
 # Training data (too large for git)
