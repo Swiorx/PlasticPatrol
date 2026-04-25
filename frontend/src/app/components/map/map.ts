@@ -56,15 +56,23 @@ export class Map implements OnInit, OnDestroy {
     this.map = L.map('map-container').setView([51.505, -0.09], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(this.map);;
+    }).addTo(this.map);
 
     this.debrisLayer = L.layerGroup().addTo(this.map);
 
     if ('geolocation' in navigator) {
+      // 1) Fast low-accuracy fix so the UI updates within ~1s
+      navigator.geolocation.getCurrentPosition(
+        (pos) => this.onPosition(pos),
+        (err) => this.handleGeoError(err),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+      );
+
+      // 2) Live high-accuracy updates after that
       this.watchId = navigator.geolocation.watchPosition(
         (pos) => this.onPosition(pos),
-        (err) => { this.errorMsg = `Geolocation error: ${err.message}`; this.cdr.detectChanges(); },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        (err) => this.handleGeoError(err),
+        { enableHighAccuracy: true, timeout: 30000, maximumAge: 30000 }
       );
     } else {
       this.errorMsg = 'Geolocation is not supported by your browser.';
@@ -117,6 +125,21 @@ export class Map implements OnInit, OnDestroy {
     this.lastPostedLon = lon;
 
     this.api.postLocation(lat, lon).subscribe({ error: (err: HttpErrorResponse) => console.warn('postLocation failed', err) });
+  }
+
+  private handleGeoError(err: GeolocationPositionError) {
+    // Don't overwrite a good fix with a transient watchPosition timeout
+    if (this.latitude !== null && this.longitude !== null && err.code === err.TIMEOUT) return;
+
+    this.errorMsg =
+      err.code === err.PERMISSION_DENIED
+        ? 'Location permission denied. Click the location icon in the address bar and allow access, then refresh.'
+        : err.code === err.POSITION_UNAVAILABLE
+          ? 'Could not determine your location. Check that location services are enabled on your device.'
+          : err.code === err.TIMEOUT
+            ? 'Locating is taking too long. Try moving outside or refreshing.'
+            : `Geolocation error: ${err.message}`;
+    this.cdr.detectChanges();
   }
 
   loadDebris() {
