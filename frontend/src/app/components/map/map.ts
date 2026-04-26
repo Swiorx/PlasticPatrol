@@ -87,18 +87,33 @@ export class Map implements AfterViewInit, OnDestroy {
     });
 
     if ('geolocation' in navigator) {
-      // 1) Fast low-accuracy fix so the UI updates within ~1s
+      // Fallback: if locating takes more than 10s, show a helpful message
+      const locatingTimeout = setTimeout(() => {
+        if (this.latitude === null && !this.errorMsg) {
+          this.errorMsg = 'Location is taking longer than expected. Please ensure you have allowed location access in your browser.';
+          this.cdr.detectChanges();
+        }
+      }, 10000);
+
       navigator.geolocation.getCurrentPosition(
-        (pos) => this.onPosition(pos),
-        (err) => this.handleGeoError(err),
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
+        (pos) => {
+          clearTimeout(locatingTimeout);
+          this.onPosition(pos);
+        },
+        (err) => {
+          clearTimeout(locatingTimeout);
+          this.handleGeoError(err);
+        },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
       );
 
-      // 2) Live high-accuracy updates after that
       this.watchId = navigator.geolocation.watchPosition(
-        (pos) => this.onPosition(pos),
+        (pos) => {
+          clearTimeout(locatingTimeout);
+          this.onPosition(pos);
+        },
         (err) => this.handleGeoError(err),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
       );
     } else {
       this.errorMsg = 'Geolocation is not supported by your browser.';
@@ -332,6 +347,27 @@ export class Map implements AfterViewInit, OnDestroy {
         Math.min(this.map.getZoom(), MAX_ZOOM),
       );
     }
+  }
+
+  useDefaultLocation() {
+    // Fallback to a default location (e.g., center of map or a fixed coordinate)
+    // if geolocation is failing/stuck.
+    const center = this.map.getCenter();
+    this.onPosition({
+      coords: {
+        latitude: center.lat,
+        longitude: center.lng,
+        accuracy: 0,
+        altitude: null,
+        altitudeAccuracy: null,
+        heading: null,
+        speed: null
+      },
+      timestamp: Date.now()
+    } as GeolocationPosition);
+    this.statusMsg = 'Using map center as location.';
+    this.errorMsg = null;
+    this.cdr.detectChanges();
   }
 
   ngOnDestroy() {
