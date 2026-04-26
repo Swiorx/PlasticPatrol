@@ -25,6 +25,8 @@ export class Map implements AfterViewInit, OnDestroy {
   refreshing = false;
   debrisCount = 0;
 
+  followUser = true;
+
   showCollectOverlay = false;
   activeReservationId: number | null = null;
   activeClusterEcoPoints = 0;
@@ -41,6 +43,7 @@ export class Map implements AfterViewInit, OnDestroy {
   private lastPostedLon: number | null = null;
   private debrisLoaded = false;
   private hasCentered = false;
+  private userDragged = false;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -60,6 +63,13 @@ export class Map implements AfterViewInit, OnDestroy {
     }).addTo(this.map);
 
     this.debrisLayer = L.layerGroup().addTo(this.map);
+
+    // Detect manual map interaction → stop auto-following
+    this.map.on('dragstart', () => {
+      this.userDragged = true;
+      this.followUser = false;
+      this.cdr.detectChanges();
+    });
 
     if ('geolocation' in navigator) {
       // 1) Fast low-accuracy fix so the UI updates within ~1s
@@ -89,8 +99,10 @@ export class Map implements AfterViewInit, OnDestroy {
     this.errorMsg = null;
 
     if (!this.hasCentered) {
-      this.map.setView([lat, lon], 13);
+      this.map.setView([lat, lon], 16);
       this.hasCentered = true;
+    } else if (this.followUser) {
+      this.map.setView([lat, lon], this.map.getZoom());
     }
 
     if (!this.userMarker) {
@@ -272,6 +284,14 @@ export class Map implements AfterViewInit, OnDestroy {
     const dLon = toRad(lon2 - lon1);
     const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(a));
+  }
+
+  centerOnUser() {
+    this.followUser = true;
+    this.userDragged = false;
+    if (this.latitude !== null && this.longitude !== null) {
+      this.map.setView([this.latitude, this.longitude], this.map.getZoom());
+    }
   }
 
   ngOnDestroy() {
