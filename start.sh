@@ -25,7 +25,17 @@ trap cleanup EXIT INT TERM
 # ── 1. PostgreSQL ────────────────────────────────────────────────────────────
 log "Starting PostgreSQL..."
 if ! pg_isready -q 2>/dev/null; then
-    sudo service postgresql start
+    if command -v systemctl >/dev/null 2>&1; then
+        sudo systemctl start postgresql || true
+    elif command -v service >/dev/null 2>&1; then
+        sudo service postgresql start || true
+    elif command -v rc-service >/dev/null 2>&1; then
+        sudo rc-service postgresql start || true
+    elif [ -x /etc/init.d/postgresql ]; then
+        sudo /etc/init.d/postgresql start || true
+    else
+        warn "Nu am putut detecta o metodă automată pentru a porni PostgreSQL pe această distribuție."
+    fi
     for i in $(seq 1 10); do
         pg_isready -q 2>/dev/null && break
         sleep 1
@@ -46,11 +56,19 @@ fi
 # ── 3. Backend venv ──────────────────────────────────────────────────────────
 if [ ! -f "$BACKEND/.venv/bin/activate" ]; then
     log "Creating Python virtual environment..."
-    python3 -m venv "$BACKEND/.venv"
+    if command -v uv >/dev/null 2>&1; then
+        uv venv "$BACKEND/.venv" --python 3.11
+    else
+        python3 -m venv "$BACKEND/.venv"
+    fi
 fi
 
 log "Installing/verifying backend dependencies..."
-"$BACKEND/.venv/bin/pip" install -q -r "$BACKEND/requirements.txt"
+if command -v uv >/dev/null 2>&1; then
+    uv pip install --python "$BACKEND/.venv" -q -r "$BACKEND/requirements.txt"
+else
+    "$BACKEND/.venv/bin/pip" install -q -r "$BACKEND/requirements.txt"
+fi
 
 # ── 4. Start backend ─────────────────────────────────────────────────────────
 log "Starting backend on http://localhost:8000 ..."
