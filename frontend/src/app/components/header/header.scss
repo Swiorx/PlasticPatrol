@@ -1,78 +1,171 @@
 @use '../../../styles.scss' as *;
 
 .navi {
-    position: fixed;
-    top: 1rem;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 1200px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.8rem 1.5rem;
-    z-index: 1000;
-    @include glass;
-    border-radius: 999px; /* Pill shape for header */
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 1200px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1.5rem;
+  z-index: 1000;
+  @include glass;
+  border-radius: 999px;
 }
 
 .nav-left {
-    flex: 1;
-    display: flex;
-    align-items: center;
+  flex: 1;
+  display: flex;
+  align-items: center;
 }
 
 .user-greeting {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    
-    b {
-        font-weight: 700;
-        color: var(--text-main);
-    }
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-muted);
+
+  b {
+    font-weight: 700;
+    color: var(--text-main);
+  }
 }
 
 .points-badge {
-    display: inline-block;
-    margin-left: 10px;
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--primary-hover);
+  display: inline-block;
+  margin-left: 10px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary-hover);
 }
 
 .nav-center {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 
-    li a {
-        font-weight: 600;
-        font-size: 0.95rem;
-        color: var(--text-muted);
-        padding: 0.5rem 1rem;
-        border-radius: 999px;
-        transition: all 0.3s ease;
+  li a {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    transition: all 0.3s ease;
 
-        &:hover, &.active {
-            color: var(--text-main);
-            background: rgba(0, 0, 0, 0.05);
-        }
+    &:hover,
+    &.active {
+      color: var(--text-main);
+      background: rgba(0, 0, 0, 0.05);
     }
+  }
 }
 
 .nav-right {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 1rem;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .navi {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 24px;
+  }
+
+  .nav-left,
+  .nav-right {
+    flex: 1 1 calc(50% - 0.5rem);
+  }
+
+  .nav-center {
+    flex: 1 1 100%;
+    order: 3;
+    justify-content: center;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    li {
+      flex: 0 0 auto;
+    }
+
+    li a {
+      display: block;
+      padding: 0.55rem 0.8rem;
+      white-space: nowrap;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .navi {
+    top: 0.5rem;
+    width: calc(100% - 1rem);
+    max-height: calc(100vh - 1rem);
+    overflow-y: auto;
+  }
+
+  .nav-left,
+  .nav-right {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .user-greeting {
+    width: 100%;
+    text-align: center;
+    font-size: 0.85rem;
+  }
+
+  .points-badge {
+    margin-left: 6px;
+    padding: 3px 8px;
+    font-size: 0.78rem;
+  }
+
+  .nav-center {
+    order: 2;
+    justify-content: space-between;
+    gap: 0.25rem;
+
+    li {
+      flex: 1 1 0;
+    }
+
+    li a {
+      text-align: center;
+      font-size: 0.88rem;
+      padding: 0.55rem 0.45rem;
+    }
+  }
+
+  .nav-right {
+    order: 3;
+    gap: 0.5rem;
+
+    a,
+    button {
+      flex: 1;
+      padding-inline: 12px;
+    }
+  }
 }

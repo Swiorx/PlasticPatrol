@@ -1,6 +1,5 @@
 <div class="overlay-backdrop">
   <div class="overlay-modal glass-panel">
-
     @if (state === 'loading') {
       <p class="loading-text">Analyzing photo...</p>
       <div class="spinner"></div>
@@ -18,27 +17,35 @@
 
     @if (state === 'idle' || state === 'fail') {
       <h3>Photograph the debris</h3>
-      <p class="subtitle">Take or upload a clear photo showing the debris. Up to {{ 3 }} attempts.</p>
+      <p class="subtitle">
+        Take or upload a clear photo showing the debris. Up to {{ 3 }} attempts.
+      </p>
 
       @if (state === 'fail') {
         <p class="error-text">{{ message }}</p>
       }
 
       @if (previewUrl) {
-        <img [src]="previewUrl" alt="Preview" class="preview-image">
+        <img [src]="previewUrl" alt="Preview" class="preview-image" />
       }
 
       <div class="file-input-wrapper">
-        <input type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event)">
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          (change)="onFileSelected($event)"
+        />
       </div>
 
-      <button class="btn-primary overlay-btn" (click)="submit()" [disabled]="!selectedFile || isLoading">
+      <button
+        class="btn-primary overlay-btn"
+        (click)="submit()"
+        [disabled]="!selectedFile || isLoading"
+      >
         Submit Photo
       </button>
 
-      <button class="btn-glass overlay-btn overlay-btn-secondary" (click)="cancel()">
-        Cancel
-      </button>
+      <button class="btn-glass overlay-btn overlay-btn-secondary" (click)="cancel()">Cancel</button>
     }
   </div>
 </div>
@@ -53,13 +60,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 1rem;
   }
-  
+
   .overlay-modal {
     width: 90%;
     max-width: 420px;
     padding: 2.5rem;
     text-align: center;
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
   }
 
   h3 {
@@ -120,12 +130,12 @@
     object-fit: cover;
     border-radius: 12px;
     margin-bottom: 1rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
   .file-input-wrapper {
     margin-bottom: 1.5rem;
-    
+
     input {
       width: 100%;
       box-sizing: border-box;
@@ -141,15 +151,45 @@
 
   .overlay-btn-secondary {
     background: transparent !important;
-    border: 1px solid rgba(0,0,0,0.1) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
     color: var(--text-muted) !important;
     box-shadow: none !important;
-    
+
     &:hover {
-      background: rgba(0,0,0,0.05) !important;
+      background: rgba(0, 0, 0, 0.05) !important;
       color: var(--text-main) !important;
     }
   }
 
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .overlay-backdrop {
+      align-items: flex-end;
+      padding: 0.75rem;
+    }
+
+    .overlay-modal {
+      width: 100%;
+      padding: 1.75rem 1.25rem;
+      border-radius: 18px;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .preview-image {
+      max-height: 160px;
+    }
+  }
 </style>
