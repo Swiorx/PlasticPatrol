@@ -1,0 +1,68 @@
+{
+  "planPath": "docs/superpowers/plans/2026-04-25-debris-reserve-collect.md",
+  "tasks": [
+    {
+      "id": 3,
+      "subject": "Task 1: DB — ClusterReservation model + is_reserved column",
+      "status": "pending",
+      "description": "**Goal:** Add ClusterReservation table and is_reserved column to PlasticDebris.\n\n**Files:**\n- Modify: `backend/app/db/models.py`\n- Create: `backend/app/db/migrations.py`\n- Modify: `backend/app/main.py`\n\n**Verify:** `cd backend && python -c \"from app.db.models import ClusterReservation, PlasticDebris; print('OK')\"` → OK\n\n```json:metadata\n{\"files\": [\"backend/app/db/models.py\", \"backend/app/db/migrations.py\", \"backend/app/main.py\"], \"verifyCommand\": \"cd backend && python -c \\\"from app.db.models import ClusterReservation, PlasticDebris; print('OK')\\\"\", \"acceptanceCriteria\": [\"ClusterReservation table created\", \"is_reserved column on plastic_debris\", \"startup migration runs safely\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 2: Backend — Reserve and release endpoints",
+      "status": "pending",
+      "blockedBy": [3],
+      "description": "**Goal:** POST /api/clusters/reserve and DELETE /api/clusters/{id}/reserve.\n\n**Files:**\n- Create: `backend/app/api/routes/clusters.py`\n- Modify: `backend/app/main.py`\n\n**Verify:** `cd backend && python -c \"from app.api.routes.clusters import router; print('OK')\"` → OK\n\n```json:metadata\n{\"files\": [\"backend/app/api/routes/clusters.py\", \"backend/app/main.py\"], \"verifyCommand\": \"cd backend && python -c \\\"from app.api.routes.clusters import router; print('OK')\\\"\", \"acceptanceCriteria\": [\"reserve endpoint created\", \"one-per-user enforced\", \"release endpoint works\"]}\n```"
+    },
+    {
+      "id": 5,
+      "subject": "Task 3: Backend — Collect endpoint (photo + ML + proximity)",
+      "status": "pending",
+      "blockedBy": [4],
+      "description": "**Goal:** POST /api/clusters/{reservation_id}/collect.\n\n**Files:**\n- Modify: `backend/app/api/routes/clusters.py`\n\n**Verify:** `cd backend && python -c \"from app.api.routes.clusters import collect_cluster; print('OK')\"` → OK\n\n```json:metadata\n{\"files\": [\"backend/app/api/routes/clusters.py\"], \"verifyCommand\": \"cd backend && python -c \\\"from app.api.routes.clusters import collect_cluster; print('OK')\\\"\", \"acceptanceCriteria\": [\"proximity check enforced\", \"ML classifier called\", \"attempt_count incremented on fail\", \"is_collected set on ML pass\"]}\n```"
+    },
+    {
+      "id": 6,
+      "subject": "Task 4: Backend — APScheduler expiry job",
+      "status": "pending",
+      "blockedBy": [4],
+      "description": "**Goal:** Every 5 minutes expire stale reservations.\n\n**Files:**\n- Create: `backend/app/scheduler.py`\n- Modify: `backend/requirements.txt`\n- Modify: `backend/app/main.py`\n\n**Verify:** `cd backend && python -c \"from app.scheduler import expire_reservations; print('OK')\"` → OK\n\n```json:metadata\n{\"files\": [\"backend/app/scheduler.py\", \"backend/requirements.txt\", \"backend/app/main.py\"], \"verifyCommand\": \"cd backend && python -c \\\"from app.scheduler import expire_reservations; print('OK')\\\"\", \"acceptanceCriteria\": [\"apscheduler installed\", \"expire_reservations function works\", \"server starts with scheduler\"]}\n```"
+    },
+    {
+      "id": 7,
+      "subject": "Task 5: Backend — Filter reserved debris + cluster response",
+      "status": "pending",
+      "blockedBy": [5],
+      "description": "**Goal:** GET /api/users/me/debris returns clusters with source_point_ids, is_reserved, reservation_id.\n\n**Files:**\n- Modify: `backend/app/schemas/user.py`\n- Modify: `backend/app/api/routes/users.py`\n\n**Verify:** `cd backend && python -c \"from app.schemas.user import DebrisOut; f=list(DebrisOut.model_fields.keys()); assert 'source_point_ids' in f; print('OK')\"` → OK\n\n```json:metadata\n{\"files\": [\"backend/app/schemas/user.py\", \"backend/app/api/routes/users.py\"], \"verifyCommand\": \"cd backend && python -c \\\"from app.schemas.user import DebrisOut; f=list(DebrisOut.model_fields.keys()); assert 'source_point_ids' in f; print('OK')\\\"\", \"acceptanceCriteria\": [\"DebrisOut schema updated\", \"debris endpoint returns clusters\", \"reserved filter applied\"]}\n```"
+    },
+    {
+      "id": 8,
+      "subject": "Task 6: Backend — Sentinel re-verification service",
+      "status": "pending",
+      "blockedBy": [5],
+      "description": "**Goal:** After satellite scan award eco points if debris gone or revert if still detected.\n\n**Files:**\n- Create: `backend/app/services/sentinel_verify.py`\n- Modify: `backend/app/api/routes/users.py`\n\n**Verify:** `cd backend && python -c \"from app.services.sentinel_verify import verify_collected_debris; print('OK')\"` → OK\n\n```json:metadata\n{\"files\": [\"backend/app/services/sentinel_verify.py\", \"backend/app/api/routes/users.py\"], \"verifyCommand\": \"cd backend && python -c \\\"from app.services.sentinel_verify import verify_collected_debris; print('OK')\\\"\", \"acceptanceCriteria\": [\"verify function awards points\", \"verify function reverts on fail\", \"called after satellite scan\"]}\n```"
+    },
+    {
+      "id": 9,
+      "subject": "Task 7: Frontend — API service update",
+      "status": "pending",
+      "blockedBy": [7],
+      "description": "**Goal:** Update DebrisOut interface and add three new API methods.\n\n**Files:**\n- Modify: `frontend/src/app/services/api.service.ts`\n\n**Verify:** `cd frontend && npx tsc --noEmit` → no errors\n\n```json:metadata\n{\"files\": [\"frontend/src/app/services/api.service.ts\"], \"verifyCommand\": \"cd frontend && npx tsc --noEmit\", \"acceptanceCriteria\": [\"DebrisOut updated\", \"reserveCluster method\", \"collectCluster method\", \"releaseReservation method\"]}\n```"
+    },
+    {
+      "id": 10,
+      "subject": "Task 8: Frontend — Map cluster markers with reserve/collect",
+      "status": "pending",
+      "blockedBy": [9],
+      "description": "**Goal:** Map renders clusters with Reserve/Collect popup buttons and proximity check.\n\n**Files:**\n- Modify: `frontend/src/app/components/map/map.ts`\n- Modify: `frontend/src/app/components/map/map.html`\n\n**Verify:** `cd frontend && ng build --configuration development 2>&1 | tail -5` → Application bundle generation complete.\n\n```json:metadata\n{\"files\": [\"frontend/src/app/components/map/map.ts\", \"frontend/src/app/components/map/map.html\"], \"verifyCommand\": \"cd frontend && ng build --configuration development 2>&1 | tail -5\", \"acceptanceCriteria\": [\"clusters render\", \"reserve button works\", \"collect button proximity check\", \"overlay triggered\"]}\n```"
+    },
+    {
+      "id": 11,
+      "subject": "Task 9: Frontend — CollectOverlay component",
+      "status": "pending",
+      "blockedBy": [10],
+      "description": "**Goal:** Full-screen photo upload overlay with retry counting and success/fail states.\n\n**Files:**\n- Create: `frontend/src/app/components/collect-overlay/collect-overlay.ts`\n- Create: `frontend/src/app/components/collect-overlay/collect-overlay.html`\n\n**Verify:** `cd frontend && ng build --configuration development 2>&1 | tail -5` → Application bundle generation complete.\n\n```json:metadata\n{\"files\": [\"frontend/src/app/components/collect-overlay/collect-overlay.ts\", \"frontend/src/app/components/collect-overlay/collect-overlay.html\"], \"verifyCommand\": \"cd frontend && ng build --configuration development 2>&1 | tail -5\", \"acceptanceCriteria\": [\"photo upload works\", \"retry counting correct\", \"success emits collected\", \"cancel releases reservation\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-04-25T00:00:00Z"
+}
