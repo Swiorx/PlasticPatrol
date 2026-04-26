@@ -257,6 +257,7 @@
 }
 
 @keyframes locate-pulse {
+
   0%,
   100% {
     box-shadow:
@@ -272,6 +273,7 @@
 }
 
 @keyframes debris-pulse {
+
   0%,
   100% {
     box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.3);
@@ -279,5 +281,55 @@
 
   50% {
     box-shadow: 0 0 0 7px rgba(231, 76, 60, 0);
+  }
+}
+
+/* Transform the basic divIcon from map.ts into a premium glass marker */
+::ng-deep .leaflet-div-icon {
+  background: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(10px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(180%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
+  border-radius: 50% !important;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  /* Increase size and adjust anchor positioning */
+  width: 40px !important;
+  height: 40px !important;
+  margin-left: -20px !important;
+  margin-top: -20px !important;
+
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow: visible !important;
+
+  &:hover {
+    transform: scale(1.2) translateY(-4px);
+    background: rgba(255, 255, 255, 0.6) !important;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2) !important;
+    z-index: 1000 !important;
+  }
+
+  /* Target the inner 14x14 div and transform it into the icon */
+  div {
+    width: 24px !important;
+    height: 24px !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+
+    /* Use mask to shape the existing colored background into a bottle icon */
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15 2H9c-.6 0-1 .4-1 1v2H7c-1.1 0-2 .9-2 2v12c0 1.7 1.3 3 3 3h8c1.7 0 3-1.3 3-3V7c0-1.1-.9-2-2-2h-1V3c0-.6-.4-1-1-1zm-5 2h4v1h-4V4zm7 15c0 .6-.4 1-1 1H8c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1h8c.6 0 1 .4 1 1v12zM9 9h6v2H9V9zm0 4h6v2H9v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15 2H9c-.6 0-1 .4-1 1v2H7c-1.1 0-2 .9-2 2v12c0 1.7 1.3 3 3 3h8c1.7 0 3-1.3 3-3V7c0-1.1-.9-2-2-2h-1V3c0-.6-.4-1-1-1zm-5 2h4v1h-4V4zm7 15c0 .6-.4 1-1 1H8c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1h8c.6 0 1 .4 1 1v12zM9 9h6v2H9V9zm0 4h6v2H9v-2z'/%3E%3C/svg%3E") center/contain no-repeat;
+
+    transition: transform 0.3s ease;
+  }
+
+  &:hover div {
+    transform: rotate(12deg);
   }
 }
