@@ -61,6 +61,7 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    animation: backdrop-fade 0.25s ease-out both;
   }
 
   .overlay-modal {
@@ -70,6 +71,7 @@
     text-align: center;
     max-height: calc(100dvh - 2rem);
     overflow-y: auto;
+    animation: modal-rise 0.35s ease-out both;
   }
 
   h3 {
@@ -103,12 +105,14 @@
     font-size: 3rem;
     color: var(--primary);
     margin-bottom: 1rem;
+    animation: icon-pop 0.45s ease-out both;
   }
 
   .icon-error {
     font-size: 3rem;
     color: #ef4444;
     margin-bottom: 1rem;
+    animation: icon-pop 0.45s ease-out both;
   }
 
   .success-text {
@@ -164,6 +168,40 @@
   @keyframes spin {
     to {
       transform: rotate(360deg);
+    }
+  }
+
+  @keyframes backdrop-fade {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes modal-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.98);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes icon-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.84);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
     }
   }
 

@@ -35,6 +35,33 @@ body {
   box-sizing: border-box;
 }
 
+@keyframes subtle-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes soft-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  50% {
+    box-shadow:
+      0 12px 40px rgba(16, 185, 129, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+}
+
 h1,
 h2,
 h3,
@@ -66,6 +93,9 @@ a {
 
 .glass-panel {
   @include glass;
+  animation:
+    subtle-rise 0.55s ease-out both,
+    soft-glow 7s ease-in-out 0.8s infinite;
 }
 
 .btn-glass {
@@ -92,6 +122,10 @@ a {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+  }
 }
 
 .btn-primary {
@@ -111,6 +145,10 @@ a {
     background: var(--primary-hover);
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
   }
 
   &:disabled {
@@ -137,6 +175,10 @@ a {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
   }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+  }
 }
 
 input,
@@ -161,6 +203,17 @@ textarea {
 
   &::placeholder {
     color: var(--text-muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
