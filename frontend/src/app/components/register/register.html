@@ -14,11 +14,11 @@
       </label>
       <label>
         Password
-        <input type="password" name="password" [(ngModel)]="password" required autocomplete="new-password" placeholder="••••••••" />
+        <input type="password" name="password" [(ngModel)]="password" required autocomplete="new-password" />
       </label>
       <label>
         Confirm Password
-        <input type="password" name="confirmPassword" [(ngModel)]="confirmPassword" required autocomplete="new-password" placeholder="••••••••" />
+        <input type="password" name="confirmPassword" [(ngModel)]="confirmPassword" required autocomplete="new-password" />
       </label>
       @if (errorMsg) {
         <p class="error">{{ errorMsg }}</p>

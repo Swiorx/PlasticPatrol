@@ -40,6 +40,7 @@ export class Map implements AfterViewInit, OnDestroy {
   private lastPostedLat: number | null = null;
   private lastPostedLon: number | null = null;
   private debrisLoaded = false;
+  private hasCentered = false;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -72,7 +73,7 @@ export class Map implements AfterViewInit, OnDestroy {
       this.watchId = navigator.geolocation.watchPosition(
         (pos) => this.onPosition(pos),
         (err) => this.handleGeoError(err),
-        { enableHighAccuracy: true, timeout: 30000, maximumAge: 30000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
       );
     } else {
       this.errorMsg = 'Geolocation is not supported by your browser.';
@@ -87,7 +88,10 @@ export class Map implements AfterViewInit, OnDestroy {
     this.longitude = lon;
     this.errorMsg = null;
 
-    this.map.setView([lat, lon], 13);
+    if (!this.hasCentered) {
+      this.map.setView([lat, lon], 13);
+      this.hasCentered = true;
+    }
 
     if (!this.userMarker) {
       const icon = this.L.icon({
@@ -232,7 +236,10 @@ export class Map implements AfterViewInit, OnDestroy {
         this.loadDebris();
       },
       error: (err: HttpErrorResponse) => {
-        this.statusMsg = err.error?.detail || 'Could not reserve';
+        const msg = err.error?.detail || 'Could not reserve';
+        this.statusMsg = msg;
+        alert(msg); // Alert the user directly
+        this.loadDebris(); // Refresh to hide the debris since it's reserved by someone else
         this.cdr.detectChanges();
       }
     });

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Header } from '../header/header';
 import { AuthService, UserOut } from '../../services/auth.service';
@@ -16,11 +16,13 @@ export class Profile implements OnInit {
   user: UserOut | null = null;
   reservations: ReservationOut[] = [];
   loadingReservations = false;
+  reservationsError: string | null = null;
 
   constructor(
     public auth: AuthService, 
     private api: ApiService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -34,13 +36,18 @@ export class Profile implements OnInit {
 
   loadReservations() {
     this.loadingReservations = true;
+    this.reservationsError = null;
     this.api.getReservations().subscribe({
       next: (res) => {
         this.reservations = res;
         this.loadingReservations = false;
+        this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error loading reservations:', err);
+        this.reservationsError = 'Eroare la încărcarea rezervărilor. Repornește scriptul de backend!';
         this.loadingReservations = false;
+        this.cdr.detectChanges();
       }
     });
   }

@@ -22,6 +22,8 @@
         <h2>Active Reservations</h2>
         @if (loadingReservations) {
           <p class="loading-text">Loading...</p>
+        } @else if (reservationsError) {
+          <p class="error-text" style="color:#ef4444; font-weight:500;">{{ reservationsError }}</p>
         } @else if (reservations.length === 0) {
           <p class="empty-text">You have no active reservations.</p>
         } @else {

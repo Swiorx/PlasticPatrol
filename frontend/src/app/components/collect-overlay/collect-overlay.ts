@@ -71,9 +71,6 @@ export class CollectOverlayComponent {
   }
 
   cancel() {
-    this.api.releaseReservation(this.reservationId).subscribe({
-      complete: () => this.closed.emit(),
-      error: () => this.closed.emit(),
-    });
+    this.closed.emit();
   }
 }
