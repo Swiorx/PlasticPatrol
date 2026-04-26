@@ -64,11 +64,13 @@
   }
 
   .info-overlay {
-    left: 12px;
-    right: 12px;
+    left: 50%;
+    right: auto;
     bottom: 16px;
+    width: min(calc(100vw - 24px), 352px);
     min-width: 0;
     padding: 16px;
+    transform: translateX(-50%);
 
     h2 {
       margin-bottom: 12px;
