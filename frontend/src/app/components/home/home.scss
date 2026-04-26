@@ -22,6 +22,12 @@
 
     .highlight {
       color: var(--primary);
+      background: linear-gradient(90deg, var(--primary), #34d399, var(--primary-hover));
+      background-size: 180% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: highlight-flow 6s ease-in-out infinite;
     }
   }
 
@@ -38,11 +44,23 @@
     display: flex;
     gap: 1.5rem;
     justify-content: center;
+    animation: subtle-rise 0.55s ease-out 0.15s both;
 
     a {
       font-size: 1.1rem;
       padding: 14px 32px;
     }
+  }
+}
+
+@keyframes highlight-flow {
+  0%,
+  100% {
+    background-position: 0% center;
+  }
+
+  50% {
+    background-position: 100% center;
   }
 }
 
