@@ -1,4 +1,11 @@
-import { Component, AfterViewInit, OnDestroy, PLATFORM_ID, Inject, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  AfterViewInit,
+  OnDestroy,
+  PLATFORM_ID,
+  Inject,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ApiService, DebrisOut } from '../../services/api.service';
@@ -15,7 +22,7 @@ const COLLECT_RADIUS_M = 100;
   standalone: true,
   imports: [CommonModule, CollectOverlayComponent, Header],
   templateUrl: './map.html',
-  styleUrl: './map.scss'
+  styleUrl: './map.scss',
 })
 export class Map implements AfterViewInit, OnDestroy {
   latitude: number | null = null;
@@ -48,8 +55,8 @@ export class Map implements AfterViewInit, OnDestroy {
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private cdr: ChangeDetectorRef,
-    private api: ApiService
-  ) { }
+    private api: ApiService,
+  ) {}
 
   async ngAfterViewInit() {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -58,9 +65,14 @@ export class Map implements AfterViewInit, OnDestroy {
     this.L = L;
 
     this.map = L.map('map-container').setView([51.505, -0.09], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(this.map);
+    L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
+      {
+        attribution:
+          'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri',
+        maxZoom: 13,
+      },
+    ).addTo(this.map);
 
     this.debrisLayer = L.layerGroup().addTo(this.map);
 
@@ -76,14 +88,14 @@ export class Map implements AfterViewInit, OnDestroy {
       navigator.geolocation.getCurrentPosition(
         (pos) => this.onPosition(pos),
         (err) => this.handleGeoError(err),
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 },
       );
 
       // 2) Live high-accuracy updates after that
       this.watchId = navigator.geolocation.watchPosition(
         (pos) => this.onPosition(pos),
         (err) => this.handleGeoError(err),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 3000 },
       );
     } else {
       this.errorMsg = 'Geolocation is not supported by your browser.';
@@ -110,7 +122,10 @@ export class Map implements AfterViewInit, OnDestroy {
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
       });
       this.userMarker = this.L.marker([lat, lon], { icon }).addTo(this.map);
     } else {
@@ -132,15 +147,19 @@ export class Map implements AfterViewInit, OnDestroy {
   private maybePostLocation(lat: number, lon: number) {
     const now = Date.now();
     const movedFar =
-      this.lastPostedLat === null || this.lastPostedLon === null ||
-      this.haversineMeters(this.lastPostedLat, this.lastPostedLon, lat, lon) > POST_LOCATION_MIN_DISTANCE_M;
+      this.lastPostedLat === null ||
+      this.lastPostedLon === null ||
+      this.haversineMeters(this.lastPostedLat, this.lastPostedLon, lat, lon) >
+        POST_LOCATION_MIN_DISTANCE_M;
 
     if (now - this.lastPostedAt < POST_LOCATION_MIN_INTERVAL_MS && !movedFar) return;
     this.lastPostedAt = now;
     this.lastPostedLat = lat;
     this.lastPostedLon = lon;
 
-    this.api.postLocation(lat, lon).subscribe({ error: (err: HttpErrorResponse) => console.warn('postLocation failed', err) });
+    this.api
+      .postLocation(lat, lon)
+      .subscribe({ error: (err: HttpErrorResponse) => console.warn('postLocation failed', err) });
   }
 
   private handleGeoError(err: GeolocationPositionError) {
@@ -160,13 +179,16 @@ export class Map implements AfterViewInit, OnDestroy {
 
   loadDebris() {
     this.api.getDebris(RADIUS_KM).subscribe({
-      next: (items) => { this.debris = items; this.renderDebris(items); },
+      next: (items) => {
+        this.debris = items;
+        this.renderDebris(items);
+      },
       error: (err: HttpErrorResponse) => {
         if (err.status !== 401) {
           this.statusMsg = err.error?.detail || 'Could not load debris';
           this.cdr.detectChanges();
         }
-      }
+      },
     });
   }
 
@@ -187,7 +209,7 @@ export class Map implements AfterViewInit, OnDestroy {
         this.refreshing = false;
         this.statusMsg = `Scan failed: ${err.error?.detail || err.message}`;
         this.cdr.detectChanges();
-      }
+      },
     });
   }
 
@@ -197,8 +219,10 @@ export class Map implements AfterViewInit, OnDestroy {
     for (const d of items) {
       const color = d.is_reserved
         ? '#f59e0b'
-        : d.size_category === 'large' ? '#ef4444'
-          : d.size_category === 'medium' ? '#f97316'
+        : d.size_category === 'large'
+          ? '#ef4444'
+          : d.size_category === 'medium'
+            ? '#f97316'
             : '#3b82f6';
 
       const icon = this.L.divIcon({
@@ -208,8 +232,11 @@ export class Map implements AfterViewInit, OnDestroy {
         iconAnchor: [7, 7],
       });
 
-      const nearEnough = this.latitude !== null && this.longitude !== null &&
-        this.haversineMeters(this.latitude, this.longitude, d.latitude, d.longitude) <= COLLECT_RADIUS_M;
+      const nearEnough =
+        this.latitude !== null &&
+        this.longitude !== null &&
+        this.haversineMeters(this.latitude, this.longitude, d.latitude, d.longitude) <=
+          COLLECT_RADIUS_M;
 
       let popupHtml = `<div class="custom-popup">
         <div class="cluster-title">${d.size_category} cluster</div>
@@ -230,7 +257,12 @@ export class Map implements AfterViewInit, OnDestroy {
         .addTo(this.debrisLayer);
     }
 
-    (window as any)._reserveCluster = (pointIds: number[], lat: number, lon: number, eco: number) => {
+    (window as any)._reserveCluster = (
+      pointIds: number[],
+      lat: number,
+      lon: number,
+      eco: number,
+    ) => {
       this.onReserve(pointIds, lat, lon, eco);
     };
     (window as any)._collectCluster = (reservationId: number, eco: number) => {
@@ -253,7 +285,7 @@ export class Map implements AfterViewInit, OnDestroy {
         alert(msg); // Alert the user directly
         this.loadDebris(); // Refresh to hide the debris since it's reserved by someone else
         this.cdr.detectChanges();
-      }
+      },
     });
   }
 
@@ -279,10 +311,12 @@ export class Map implements AfterViewInit, OnDestroy {
 
   private haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371000;
-    const toRad = (d: number) => d * Math.PI / 180;
+    const toRad = (d: number) => (d * Math.PI) / 180;
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(a));
   }
 
