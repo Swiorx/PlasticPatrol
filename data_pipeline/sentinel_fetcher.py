@@ -254,7 +254,6 @@ def print_tuning_help():
     print("\nFor more sensitivity: reduce MIN_COMPONENT_PIXELS. For less noise: increase it.")
 
 EVALSCRIPT = """
-
 //VERSION=3
  
 function setup() {
@@ -289,11 +288,11 @@ function evaluatePixel(sample) {
     if (nirGreenRatio > 0.80) return [0]; // NIR too high relative to green = land
  
     // ── STAGE 4: FDI (Floating Debris Index)
-    // FDI = ρ_NIR - (ρ_RE + (ρ_SWIR - ρ_RE) * factor)
-    // where factor = (λ_NIR - λ_RE) / (λ_SWIR - λ_RE)
-    // Sentinel-2 bands: B8 (842 nm), B6 (740 nm), B11 (1610 nm)
-    let factor = (842 - 740) / (1610 - 740);
-    let fdi = sample.B08 - (sample.B06 + (sample.B11 - sample.B06) * factor);
+    // FDI = R_NIR - (R_RE2 + (R_SWIR1 - R_RE2) * ((λ_NIR - λ_RED) / (λ_SWIR1 - λ_RED)) * 10)
+    // Reflectance bands: B8/NIR (842 nm), B6/RE2 (740 nm), B11/SWIR1 (1610 nm)
+    // Wavelength ratio uses λ_RED = 665 nm (per Digital Earth Africa reference)
+    let factor = (842 - 665) / (1610 - 665);
+    let fdi = sample.B08 - (sample.B06 + (sample.B11 - sample.B06) * factor * 10);
  
     // ── STAGE 5: NDVI
     let ndviDen = sample.B08 + sample.B04;
