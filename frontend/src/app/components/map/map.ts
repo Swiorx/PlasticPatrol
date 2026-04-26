@@ -16,7 +16,7 @@ const RADIUS_KM = 12;
 const POST_LOCATION_MIN_INTERVAL_MS = 30_000;
 const POST_LOCATION_MIN_DISTANCE_M = 50;
 const COLLECT_RADIUS_M = 100;
-const ESRI_OCEAN_MAX_ZOOM = 13;
+const MAX_ZOOM = 20; // Actualizat pentru CartoDB Voyager
 
 @Component({
   selector: 'app-map',
@@ -57,7 +57,7 @@ export class Map implements AfterViewInit, OnDestroy {
     @Inject(PLATFORM_ID) private platformId: Object,
     private cdr: ChangeDetectorRef,
     private api: ApiService,
-  ) {}
+  ) { }
 
   async ngAfterViewInit() {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -65,18 +65,17 @@ export class Map implements AfterViewInit, OnDestroy {
     const L = await import('leaflet');
     this.L = L;
 
-    this.map = L.map('map-container', { maxZoom: ESRI_OCEAN_MAX_ZOOM }).setView(
+    this.map = L.map('map-container', { maxZoom: MAX_ZOOM }).setView(
       [51.505, -0.09],
-      ESRI_OCEAN_MAX_ZOOM,
+      13,
     );
-    L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
-      {
-        attribution:
-          'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri',
-        maxZoom: ESRI_OCEAN_MAX_ZOOM,
-      },
-    ).addTo(this.map);
+
+    // Adăugare CartoDB Voyager
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: MAX_ZOOM,
+    }).addTo(this.map);
 
     this.debrisLayer = L.layerGroup().addTo(this.map);
 
@@ -115,10 +114,10 @@ export class Map implements AfterViewInit, OnDestroy {
     this.errorMsg = null;
 
     if (!this.hasCentered) {
-      this.map.setView([lat, lon], ESRI_OCEAN_MAX_ZOOM);
+      this.map.setView([lat, lon], 15);
       this.hasCentered = true;
     } else if (this.followUser) {
-      this.map.setView([lat, lon], Math.min(this.map.getZoom(), ESRI_OCEAN_MAX_ZOOM));
+      this.map.setView([lat, lon], Math.min(this.map.getZoom(), MAX_ZOOM));
     }
 
     if (!this.userMarker) {
@@ -154,7 +153,7 @@ export class Map implements AfterViewInit, OnDestroy {
       this.lastPostedLat === null ||
       this.lastPostedLon === null ||
       this.haversineMeters(this.lastPostedLat, this.lastPostedLon, lat, lon) >
-        POST_LOCATION_MIN_DISTANCE_M;
+      POST_LOCATION_MIN_DISTANCE_M;
 
     if (now - this.lastPostedAt < POST_LOCATION_MIN_INTERVAL_MS && !movedFar) return;
     this.lastPostedAt = now;
@@ -240,7 +239,7 @@ export class Map implements AfterViewInit, OnDestroy {
         this.latitude !== null &&
         this.longitude !== null &&
         this.haversineMeters(this.latitude, this.longitude, d.latitude, d.longitude) <=
-          COLLECT_RADIUS_M;
+        COLLECT_RADIUS_M;
 
       let popupHtml = `<div class="custom-popup">
         <div class="cluster-title">${d.size_category} cluster</div>
@@ -330,7 +329,7 @@ export class Map implements AfterViewInit, OnDestroy {
     if (this.latitude !== null && this.longitude !== null) {
       this.map.setView(
         [this.latitude, this.longitude],
-        Math.min(this.map.getZoom(), ESRI_OCEAN_MAX_ZOOM),
+        Math.min(this.map.getZoom(), MAX_ZOOM),
       );
     }
   }
