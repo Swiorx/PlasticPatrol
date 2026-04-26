@@ -244,10 +244,23 @@ export class Map implements AfterViewInit, OnDestroy {
             : '#3b82f6';
 
       const icon = this.L.divIcon({
-        className: '',
-        html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>`,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
+        className: 'debris-marker',
+        html: `
+          <svg class="bottle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Main bottle body with rounded bottom -->
+            <path d="M7 9C7 7.34315 8.34315 6 10 6H14C15.6569 6 17 7.34315 17 9V18C17 20.2091 15.2091 22 13 22H11C8.79086 22 7 20.2091 7 18V9Z" fill="${color}" />
+            <!-- Cap -->
+            <path d="M10 2C10 1.44772 10.4477 1 11 1H13C13.5523 1 14 1.44772 14 2V5C14 5.55228 13.5523 6 13 6H11C10.4477 6 10 5.55228 10 5V2Z" fill="${color}" filter="brightness(0.9)" />
+            <!-- Neck -->
+            <rect x="10.5" y="4.5" width="3" height="2" fill="${color}" filter="brightness(0.85)" />
+            <!-- Label for professional look -->
+            <rect x="7" y="12" width="10" height="4" fill="white" fill-opacity="0.25" />
+            <!-- Shine/Gloss -->
+            <path d="M9 9V19" stroke="white" stroke-opacity="0.3" stroke-width="1.5" stroke-linecap="round" />
+          </svg>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
       });
 
       const nearEnough =
