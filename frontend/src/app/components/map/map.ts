@@ -16,6 +16,7 @@ const RADIUS_KM = 12;
 const POST_LOCATION_MIN_INTERVAL_MS = 30_000;
 const POST_LOCATION_MIN_DISTANCE_M = 50;
 const COLLECT_RADIUS_M = 100;
+const ESRI_OCEAN_MAX_ZOOM = 13;
 
 @Component({
   selector: 'app-map',
@@ -64,13 +65,16 @@ export class Map implements AfterViewInit, OnDestroy {
     const L = await import('leaflet');
     this.L = L;
 
-    this.map = L.map('map-container').setView([51.505, -0.09], 13);
+    this.map = L.map('map-container', { maxZoom: ESRI_OCEAN_MAX_ZOOM }).setView(
+      [51.505, -0.09],
+      ESRI_OCEAN_MAX_ZOOM,
+    );
     L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
       {
         attribution:
           'Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri',
-        maxZoom: 13,
+        maxZoom: ESRI_OCEAN_MAX_ZOOM,
       },
     ).addTo(this.map);
 
@@ -111,10 +115,10 @@ export class Map implements AfterViewInit, OnDestroy {
     this.errorMsg = null;
 
     if (!this.hasCentered) {
-      this.map.setView([lat, lon], 16);
+      this.map.setView([lat, lon], ESRI_OCEAN_MAX_ZOOM);
       this.hasCentered = true;
     } else if (this.followUser) {
-      this.map.setView([lat, lon], this.map.getZoom());
+      this.map.setView([lat, lon], Math.min(this.map.getZoom(), ESRI_OCEAN_MAX_ZOOM));
     }
 
     if (!this.userMarker) {
@@ -324,7 +328,10 @@ export class Map implements AfterViewInit, OnDestroy {
     this.followUser = true;
     this.userDragged = false;
     if (this.latitude !== null && this.longitude !== null) {
-      this.map.setView([this.latitude, this.longitude], this.map.getZoom());
+      this.map.setView(
+        [this.latitude, this.longitude],
+        Math.min(this.map.getZoom(), ESRI_OCEAN_MAX_ZOOM),
+      );
     }
   }
 
