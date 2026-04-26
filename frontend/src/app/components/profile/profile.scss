@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 60px;
+  padding: 96px 1rem 2rem;
 }
 
 .profile-card {
@@ -33,7 +33,7 @@
     gap: 0.3rem;
     padding-bottom: 0.8rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    
+
     &:last-child {
       border-bottom: none;
     }
@@ -50,7 +50,7 @@
       font-size: 1.1rem;
       color: var(--text-main);
       font-weight: 500;
-      
+
       &.highlight {
         color: var(--primary);
         font-size: 1.3rem;
@@ -62,14 +62,15 @@
   .reservations-section {
     margin-bottom: 2rem;
     text-align: left;
-    
+
     h2 {
       font-size: 1.1rem;
       margin-bottom: 1rem;
       color: var(--text-main);
     }
-    
-    .loading-text, .empty-text {
+
+    .loading-text,
+    .empty-text {
       color: var(--text-muted);
       font-size: 0.95rem;
     }
@@ -78,6 +79,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 0.8rem;
       background: rgba(255, 255, 255, 0.25);
       border: 1px solid rgba(255, 255, 255, 0.5);
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
@@ -89,16 +91,16 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
-        
+
         .res-points {
           font-weight: 700;
-          color: #047857; /* Darker green */
+          color: #047857;
           font-size: 1.05rem;
         }
-        
+
         .res-coords {
           font-size: 0.85rem;
-          color: #374151; /* Darker text */
+          color: #374151;
           font-weight: 500;
         }
       }
@@ -111,7 +113,7 @@
         color: #dc2626;
         border: 1px solid rgba(255, 255, 255, 0.9);
         box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
-        
+
         &:hover {
           background: #ef4444;
           color: white;
@@ -125,9 +127,47 @@
   .profile-actions {
     display: flex;
     justify-content: center;
-    
+
     button {
       padding: 0.8rem 2rem;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .profile-wrapper {
+    align-items: flex-start;
+    padding-top: 178px;
+  }
+
+  .profile-card {
+    max-width: none;
+    padding: 2rem 1.25rem;
+
+    h1 {
+      margin-bottom: 1.5rem;
+      font-size: 1.8rem;
+    }
+
+    .profile-info {
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .reservations-section {
+      .reservation-card {
+        align-items: stretch;
+        flex-direction: column;
+
+        .btn-sm {
+          width: 100%;
+          min-height: 40px;
+        }
+      }
+    }
+
+    .profile-actions button {
+      width: 100%;
     }
   }
 }

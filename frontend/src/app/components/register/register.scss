@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 60px;
+  padding: 96px 1rem 2rem;
 }
 
 .auth-page {
@@ -66,6 +66,26 @@
         color: var(--primary-hover);
         text-decoration: underline;
       }
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .auth-page-wrapper {
+    align-items: flex-start;
+    padding-top: 178px;
+  }
+
+  .auth-page {
+    max-width: none;
+    padding: 2rem 1.25rem;
+
+    h1 {
+      font-size: 1.8rem;
+    }
+
+    form {
+      gap: 1rem;
     }
   }
 }
