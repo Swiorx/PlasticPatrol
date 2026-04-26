@@ -1,17 +1,19 @@
 <app-header></app-header>
 <div class="map-wrapper">
   <div id="map-container"></div>
-  <div class="info-overlay">
-    <h2>Current Location</h2>
+  <div class="info-overlay glass-panel">
+    <h2><span class="icon">📍</span> Current Location</h2>
 
     @if (errorMsg) {
     <div class="error">{{ errorMsg }}</div>
     } @else if (latitude != null && longitude != null) {
-    <p>Lat: {{ latitude | number:'1.4-4' }}</p>
-    <p>Lng: {{ longitude | number:'1.4-4' }}</p>
-    <p>Debris nearby (12 km): {{ debrisCount }}</p>
+    <div class="location-details">
+      <p><b>Lat:</b> {{ latitude | number:'1.4-4' }}</p>
+      <p><b>Lng:</b> {{ longitude | number:'1.4-4' }}</p>
+    </div>
+    <p class="debris-count">Debris nearby (12 km): <strong>{{ debrisCount }}</strong></p>
 
-    <button type="button" (click)="refreshSatellite()" [disabled]="refreshing">
+    <button type="button" class="btn-primary" (click)="refreshSatellite()" [disabled]="refreshing">
       {{ refreshing ? 'Scanning...' : 'Refresh satellite scan' }}
     </button>
 
@@ -19,7 +21,7 @@
     <p class="status">{{ statusMsg }}</p>
     }
     } @else {
-    <p>Locating...</p>
+    <p class="loading">Locating...</p>
     }
   </div>
 

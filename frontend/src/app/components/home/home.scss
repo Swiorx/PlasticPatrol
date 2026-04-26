@@ -1,65 +1,62 @@
 @use '../../../styles.scss' as *;
 
-.navigation {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem 4rem;
-    box-sizing: border-box;
-    z-index: 10;
-    @include glass();
+.home-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 60px;
 }
 
-.nav-links {
-    display: flex;
-    flex-direction: row;
-    gap: 2.5rem;
-    align-items: center;
-    margin: 0;
-    padding: 0;
-}
-
-li {
-    list-style: none;
-}
-
-a {
-    text-decoration: none;
+.hero-content {
+  width: 90%;
+  max-width: 800px;
+  text-align: center;
+  padding: 4rem 2rem;
+  
+  h1 {
+    font-size: 3.5rem;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
     color: white;
-    font-size: 1.3rem;
-    transition: all 0.3s ease;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+    
+    .highlight {
+      color: var(--primary);
+    }
+  }
+
+  .subtitle {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto 2.5rem auto;
+    line-height: 1.6;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    
+    a {
+      font-size: 1.1rem;
+      padding: 14px 32px;
+    }
+  }
 }
 
-a:hover {
-    color: #e0e0e0;
-}
-
-.btn-login {
-    background-color: white;
-    color: #4da5a9;
-    padding: 0.6rem 2rem;
-    border-radius: 30px;
-    font-weight: 700;
-    font-size: 1.3rem;
-    text-shadow: none;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
-
-.btn-login:hover {
-    background-color: #f0f0f0;
-    color: #3b8285;
-}
-
-img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    object-fit: cover;
+@media (max-width: 768px) {
+  .hero-content h1 {
+    font-size: 2.5rem;
+  }
+  
+  .hero-actions {
+    flex-direction: column;
+    align-items: center;
+    
+    a {
+      width: 100%;
+      max-width: 300px;
+    }
+  }
 }

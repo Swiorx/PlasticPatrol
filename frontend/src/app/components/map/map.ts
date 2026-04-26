@@ -195,7 +195,7 @@ export class Map implements AfterViewInit, OnDestroy {
       const nearEnough = this.latitude !== null && this.longitude !== null &&
         this.haversineMeters(this.latitude, this.longitude, d.latitude, d.longitude) <= COLLECT_RADIUS_M;
 
-      let popupHtml = `<b>${d.size_category} cluster</b><br>${d.source_point_count} point(s)<br>&#x1F33F; ${d.eco_points} eco points`;
+      let popupHtml = `<b>${d.size_category} cluster</b><br>${d.source_point_count} point(s)<br>&#x1F33F; ${d.eco_points} eco points<br><small>${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}</small>`;
 
       if (d.is_reserved && d.reservation_id !== null) {
         const disabled = nearEnough ? '' : 'disabled';

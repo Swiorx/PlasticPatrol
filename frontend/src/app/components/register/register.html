@@ -1,28 +1,28 @@
-<div class="auth-page">
-  <h1>Register</h1>
-  <form (ngSubmit)="submit()" #f="ngForm">
-    <label>
-      Username
-      <input type="text" name="username" [(ngModel)]="username" required minlength="3" autocomplete="username" />
-    </label>
-    <label>
-      Email
-      <input type="email" name="email" [(ngModel)]="email" required autocomplete="email" />
-    </label>
-    <label>
-      Password (min. 8 chars)
-      <input type="password" name="password" [(ngModel)]="password" required minlength="8" autocomplete="new-password" />
-    </label>
-    <label>
-      Confirm password
-      <input type="password" name="confirmPassword" [(ngModel)]="confirmPassword" required autocomplete="new-password" />
-    </label>
-    @if (errorMsg) {
-      <p class="error">{{ errorMsg }}</p>
-    }
-    <button type="submit" [disabled]="loading || f.invalid">
-      {{ loading ? 'Creating account...' : 'Register' }}
-    </button>
-  </form>
-  <p>Already have an account? <a routerLink="/login">Login</a></p>
+<app-header></app-header>
+<div class="auth-page-wrapper">
+  <div class="auth-page glass-panel">
+    <h1>Create an Account</h1>
+    <p class="subtitle">Join PlasticPatrol today</p>
+    <form (ngSubmit)="submit()" #f="ngForm">
+      <label>
+        Username
+        <input type="text" name="username" [(ngModel)]="username" required autocomplete="username" placeholder="john_doe" />
+      </label>
+      <label>
+        Email
+        <input type="email" name="email" [(ngModel)]="email" required autocomplete="email" placeholder="john@example.com" />
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" [(ngModel)]="password" required autocomplete="new-password" placeholder="••••••••" />
+      </label>
+      @if (errorMsg) {
+        <p class="error">{{ errorMsg }}</p>
+      }
+      <button type="submit" class="btn-primary" [disabled]="loading || f.invalid">
+        {{ loading ? 'Registering...' : 'Register' }}
+      </button>
+    </form>
+    <p class="switch-auth">Already have an account? <a routerLink="/login">Log in here</a></p>
+  </div>
 </div>

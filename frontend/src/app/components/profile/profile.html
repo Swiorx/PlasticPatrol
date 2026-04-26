@@ -1,0 +1,28 @@
+<app-header></app-header>
+<div class="profile-wrapper">
+  <div class="profile-card glass-panel">
+    <h1>My Account</h1>
+    @if (user) {
+      <div class="profile-info">
+        <div class="info-group">
+          <span class="label">Username</span>
+          <span class="value">{{ user.username }}</span>
+        </div>
+        <div class="info-group">
+          <span class="label">Email</span>
+          <span class="value">{{ user.email }}</span>
+        </div>
+        <div class="info-group">
+          <span class="label">Total Eco Points</span>
+          <span class="value highlight">🌟 {{ user.eco_points }}</span>
+        </div>
+      </div>
+      
+      <div class="profile-actions">
+        <button class="btn-primary" (click)="logout()">Log Out</button>
+      </div>
+    } @else {
+      <p>Loading profile...</p>
+    }
+  </div>
+</div>

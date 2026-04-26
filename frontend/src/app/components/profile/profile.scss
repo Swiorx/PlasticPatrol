@@ -1,0 +1,70 @@
+@use '../../../styles.scss' as *;
+
+.profile-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 60px;
+}
+
+.profile-card {
+  width: 100%;
+  max-width: 450px;
+  padding: 2.5rem 2.5rem;
+  text-align: center;
+
+  h1 {
+    margin-bottom: 2rem;
+    color: white;
+  }
+
+  .profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+    text-align: left;
+  }
+
+  .info-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .label {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .value {
+      font-size: 1.1rem;
+      color: white;
+      font-weight: 500;
+      
+      &.highlight {
+        color: var(--primary);
+        font-size: 1.3rem;
+        font-weight: 700;
+      }
+    }
+  }
+
+  .profile-actions {
+    display: flex;
+    justify-content: center;
+    
+    button {
+      padding: 0.8rem 2rem;
+    }
+  }
+}
