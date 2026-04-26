@@ -63,41 +63,6 @@
     height: 46px;
   }
 
-  .info-overlay {
-    left: 50%;
-    right: auto;
-    bottom: 16px;
-    width: min(calc(100vw - 24px), 352px);
-    min-width: 0;
-    padding: 16px;
-    transform: translateX(-50%);
-
-    h2 {
-      margin-bottom: 12px;
-      font-size: 1.1rem;
-    }
-
-    .location-details {
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-
-      p {
-        flex: 1 1 120px;
-        font-size: 0.88rem;
-      }
-    }
-
-    .debris-count {
-      margin: 10px 0 14px;
-      font-size: 0.98rem;
-    }
-
-    .btn-primary {
-      width: 100%;
-    }
-  }
-
   ::ng-deep .leaflet-top {
     top: 150px;
   }
@@ -170,6 +135,43 @@
   .loading {
     color: var(--text-muted);
     font-style: italic;
+  }
+}
+
+@media (max-width: 768px) {
+  .info-overlay {
+    left: 50%;
+    right: auto;
+    bottom: 16px;
+    width: min(calc(100vw - 24px), 352px);
+    min-width: 0;
+    padding: 16px;
+    transform: translateX(-50%);
+
+    h2 {
+      margin-bottom: 12px;
+      font-size: 1.1rem;
+    }
+
+    .location-details {
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+
+      p {
+        flex: 1 1 120px;
+        font-size: 0.88rem;
+      }
+    }
+
+    .debris-count {
+      margin: 10px 0 14px;
+      font-size: 0.98rem;
+    }
+
+    .btn-primary {
+      width: 100%;
+    }
   }
 }
 
