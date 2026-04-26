@@ -71,3 +71,15 @@ class DebrisOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ReservationOut(BaseModel):
+    reservation_id: int
+    point_ids: List[int]
+    cluster_center_lat: float
+    cluster_center_lon: float
+    eco_points: int
+    reserved_until: str
+    status: str
+
+    class Config:
+        from_attributes = True

@@ -26,7 +26,12 @@ export interface RefreshResult {
 
 export interface ReservationOut {
   reservation_id: number;
+  point_ids: number[];
+  cluster_center_lat: number;
+  cluster_center_lon: number;
+  eco_points: number;
   reserved_until: string;
+  status: string;
 }
 
 export interface CollectResult {
@@ -74,5 +79,9 @@ export class ApiService {
 
   releaseReservation(reservationId: number): Observable<void> {
     return this.http.delete<void>(`/api/clusters/${reservationId}/reserve`);
+  }
+
+  getReservations(): Observable<ReservationOut[]> {
+    return this.http.get<ReservationOut[]>('/api/users/me/reservations');
   }
 }

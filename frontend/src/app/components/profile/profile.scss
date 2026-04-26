@@ -16,7 +16,7 @@
 
   h1 {
     margin-bottom: 2rem;
-    color: white;
+    color: var(--text-main);
   }
 
   .profile-info {
@@ -32,7 +32,7 @@
     flex-direction: column;
     gap: 0.3rem;
     padding-bottom: 0.8rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     
     &:last-child {
       border-bottom: none;
@@ -48,13 +48,68 @@
 
     .value {
       font-size: 1.1rem;
-      color: white;
+      color: var(--text-main);
       font-weight: 500;
       
       &.highlight {
         color: var(--primary);
         font-size: 1.3rem;
         font-weight: 700;
+      }
+    }
+  }
+
+  .reservations-section {
+    margin-bottom: 2rem;
+    text-align: left;
+    
+    h2 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+    
+    .loading-text, .empty-text {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .reservation-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.02);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+
+      .res-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        
+        .res-points {
+          font-weight: 600;
+          color: var(--primary);
+        }
+        
+        .res-coords {
+          font-size: 0.85rem;
+          color: var(--text-muted);
+        }
+      }
+
+      .btn-sm {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        
+        &:hover {
+          background: rgba(239, 68, 68, 0.2);
+        }
       }
     }
   }

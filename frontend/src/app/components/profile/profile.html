@@ -14,15 +14,34 @@
         </div>
         <div class="info-group">
           <span class="label">Total Eco Points</span>
-          <span class="value highlight">🌟 {{ user.eco_points }}</span>
+          <span class="value highlight">{{ user.eco_points }}</span>
         </div>
       </div>
       
+      <div class="reservations-section">
+        <h2>Active Reservations</h2>
+        @if (loadingReservations) {
+          <p class="loading-text">Loading...</p>
+        } @else if (reservations.length === 0) {
+          <p class="empty-text">You have no active reservations.</p>
+        } @else {
+          @for (res of reservations; track res.reservation_id) {
+            <div class="reservation-card">
+              <div class="res-details">
+                <span class="res-points">{{ res.eco_points }} pts</span>
+                <span class="res-coords">{{ res.cluster_center_lat | number:'1.4-4' }}, {{ res.cluster_center_lon | number:'1.4-4' }}</span>
+              </div>
+              <button class="btn-glass btn-sm" (click)="cancelReservation(res.reservation_id)">Cancel</button>
+            </div>
+          }
+        }
+      </div>
+
       <div class="profile-actions">
         <button class="btn-primary" (click)="logout()">Log Out</button>
       </div>
     } @else {
-      <p>Loading profile...</p>
+      <p class="loading-text">Loading profile...</p>
     }
   </div>
 </div>

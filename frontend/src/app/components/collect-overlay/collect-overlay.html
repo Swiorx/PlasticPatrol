@@ -1,44 +1,42 @@
-<div style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;display:flex;align-items:center;justify-content:center">
-  <div style="background:white;border-radius:16px;padding:32px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+<div class="overlay-backdrop">
+  <div class="overlay-modal glass-panel">
 
     @if (state === 'loading') {
-      <p style="font-size:1.1rem;color:#6b7280">Analyzing photo...</p>
-      <div style="margin:16px auto;width:40px;height:40px;border:4px solid #e5e7eb;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+      <p class="loading-text">Analyzing photo...</p>
+      <div class="spinner"></div>
     }
 
     @if (state === 'success') {
-      <div style="font-size:2rem">&#x2705;</div>
-      <p style="color:#10b981;font-weight:600">{{ message }}</p>
+      <div class="icon-success">✓</div>
+      <p class="success-text">{{ message }}</p>
     }
 
     @if (state === 'released') {
-      <div style="font-size:2rem">&#x274C;</div>
-      <p style="color:#ef4444">{{ message }}</p>
+      <div class="icon-error">✕</div>
+      <p class="error-text">{{ message }}</p>
     }
 
     @if (state === 'idle' || state === 'fail') {
-      <h3 style="margin:0 0 8px 0;color:#111827">Photograph the debris</h3>
-      <p style="color:#6b7280;font-size:0.9rem;margin:0 0 20px 0">Take or upload a clear photo showing the debris. Up to {{ 3 }} attempts.</p>
+      <h3>Photograph the debris</h3>
+      <p class="subtitle">Take or upload a clear photo showing the debris. Up to {{ 3 }} attempts.</p>
 
       @if (state === 'fail') {
-        <p style="color:#ef4444;font-size:0.9rem;margin-bottom:16px">{{ message }}</p>
+        <p class="error-text">{{ message }}</p>
       }
 
       @if (previewUrl) {
-        <img [src]="previewUrl" alt="Preview" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-bottom:16px">
+        <img [src]="previewUrl" alt="Preview" class="preview-image">
       }
 
-      <input type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event)"
-        style="display:block;width:100%;margin-bottom:16px;font-size:0.9rem">
+      <div class="file-input-wrapper">
+        <input type="file" accept="image/jpeg,image/png,image/webp" (change)="onFileSelected($event)">
+      </div>
 
-      <button (click)="submit()" [disabled]="!selectedFile || isLoading"
-        style="width:100%;padding:12px;background:#10b981;color:white;border:none;border-radius:8px;font-size:1rem;cursor:pointer;margin-bottom:10px"
-        [style.opacity]="selectedFile ? '1' : '0.5'">
+      <button class="btn-primary overlay-btn" (click)="submit()" [disabled]="!selectedFile || isLoading">
         Submit Photo
       </button>
 
-      <button (click)="cancel()"
-        style="width:100%;padding:10px;background:transparent;color:#6b7280;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;cursor:pointer">
+      <button class="btn-glass overlay-btn overlay-btn-secondary" (click)="cancel()">
         Cancel reservation
       </button>
     }
@@ -46,5 +44,112 @@
 </div>
 
 <style>
+  .overlay-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .overlay-modal {
+    width: 90%;
+    max-width: 420px;
+    padding: 2.5rem;
+    text-align: center;
+  }
+
+  h3 {
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .loading-text {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .spinner {
+    margin: 1.5rem auto;
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(16, 185, 129, 0.2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .icon-success {
+    font-size: 3rem;
+    color: var(--primary);
+    margin-bottom: 1rem;
+  }
+
+  .icon-error {
+    font-size: 3rem;
+    color: #ef4444;
+    margin-bottom: 1rem;
+  }
+
+  .success-text {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .error-text {
+    color: #ef4444;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+
+  .preview-image {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  .file-input-wrapper {
+    margin-bottom: 1.5rem;
+    
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      cursor: pointer;
+    }
+  }
+
+  .overlay-btn {
+    width: 100%;
+    margin-bottom: 0.8rem;
+    padding: 12px;
+  }
+
+  .overlay-btn-secondary {
+    background: transparent !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    color: var(--text-muted) !important;
+    box-shadow: none !important;
+    
+    &:hover {
+      background: rgba(0,0,0,0.05) !important;
+      color: var(--text-main) !important;
+    }
+  }
+
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>

@@ -15,7 +15,7 @@ from geoalchemy2.types import Geography
 
 from app.db.session import get_db
 from app.db.models import User, PlasticDebris, ClusterReservation
-from app.schemas.user import UserCreate, UserOut, LocationIn, TokenOut, DebrisOut
+from app.schemas.user import UserCreate, UserOut, LocationIn, TokenOut, DebrisOut, ReservationOut
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.api.deps import get_current_user
 from app.services.geo import bbox_for_user
@@ -246,3 +246,26 @@ def refresh_my_satellite(
     inserted = insert_new_debris(db, coordinates)
     verify_collected_debris(db)
     return {"inserted": inserted, "scanned_points": len(coordinates), "bbox": bbox}
+
+@router.get("/me/reservations", response_model=List[ReservationOut])
+def get_my_reservations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    reservations = db.query(ClusterReservation).filter(
+        ClusterReservation.reserved_by == current_user.id,
+        ClusterReservation.status.in_(("reserved", "photo_verified")),
+    ).all()
+    
+    result = []
+    for r in reservations:
+        result.append(ReservationOut(
+            reservation_id=r.id,
+            point_ids=r.point_ids,
+            cluster_center_lat=r.cluster_center_lat,
+            cluster_center_lon=r.cluster_center_lon,
+            eco_points=r.eco_points,
+            reserved_until=r.reserved_until.isoformat(),
+            status=r.status
+        ))
+    return result

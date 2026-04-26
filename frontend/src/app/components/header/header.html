@@ -1,7 +1,7 @@
 <nav class="navi glass-panel">
     <div class="nav-left">
         @if (auth.currentUser(); as user) {
-        <span class="user-greeting">Hi, <b>{{ user.username }}</b>! <span class="points-badge">🌟 {{ user.eco_points }} points</span></span>
+        <span class="user-greeting">Hi, <b>{{ user.username }}</b>! <span class="points-badge">{{ user.eco_points }} points</span></span>
         }
     </div>
 

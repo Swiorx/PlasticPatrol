@@ -195,22 +195,18 @@ export class Map implements AfterViewInit, OnDestroy {
       const nearEnough = this.latitude !== null && this.longitude !== null &&
         this.haversineMeters(this.latitude, this.longitude, d.latitude, d.longitude) <= COLLECT_RADIUS_M;
 
-      let popupHtml = `<b>${d.size_category} cluster</b><br>${d.source_point_count} point(s)<br>&#x1F33F; ${d.eco_points} eco points<br><small>${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}</small>`;
+      let popupHtml = `<div class="custom-popup">
+        <div class="cluster-title">${d.size_category} cluster</div>
+        <div class="cluster-info">${d.source_point_count} point(s)</div>
+        <div class="cluster-eco">${d.eco_points} eco points</div>
+        <div class="cluster-coords">${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}</div>`;
 
       if (d.is_reserved && d.reservation_id !== null) {
         const disabled = nearEnough ? '' : 'disabled';
         const title = nearEnough ? '' : 'title="Get within 100m to collect"';
-        popupHtml += `<br><br><button ${disabled} ${title}
-          onclick="window._collectCluster(${d.reservation_id}, ${d.eco_points})"
-          style="padding:4px 10px;background:#10b981;color:white;border:none;border-radius:4px;cursor:${nearEnough ? 'pointer' : 'not-allowed'};opacity:${nearEnough ? '1' : '0.5'}">
-          Collect
-        </button>`;
+        popupHtml += `<button class="btn-primary" ${disabled} ${title} onclick="window._collectCluster(${d.reservation_id}, ${d.eco_points})">Collect</button></div>`;
       } else {
-        popupHtml += `<br><br><button
-          onclick="window._reserveCluster(${JSON.stringify(d.source_point_ids)}, ${d.latitude}, ${d.longitude}, ${d.eco_points})"
-          style="padding:4px 10px;background:#3b82f6;color:white;border:none;border-radius:4px;cursor:pointer">
-          Reserve
-        </button>`;
+        popupHtml += `<button class="btn-accent" onclick="window._reserveCluster(${JSON.stringify(d.source_point_ids)}, ${d.latitude}, ${d.longitude}, ${d.eco_points})">Reserve</button></div>`;
       }
 
       this.L.marker([d.latitude, d.longitude], { icon })
